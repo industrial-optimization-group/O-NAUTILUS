@@ -159,7 +159,7 @@ def createscatter2d(request):
     figure = go.Figure()
     figure.update_layout(
     title={
-        'text': "Y = 1/X",
+        'text': "X1 = 1/X0",
         'y':0.9,
         'x':0.5,
         'xanchor': 'center',
