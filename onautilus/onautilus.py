@@ -1,5 +1,6 @@
 import numpy as np
 from pygmo import fast_non_dominated_sorting as nds
+from typing import List
 
 
 class ONAUTILUS:
@@ -23,6 +24,7 @@ class ONAUTILUS:
         self.current_point = self.nadir
         self.previous_points_list = [self.nadir]
         self.improvement_direction = None
+        self.currently_achievable: List = None
 
     def iterate(self, preference: np.ndarray = None):
         self.preference_point = (
@@ -44,10 +46,35 @@ class ONAUTILUS:
             (self.non_dominated_known <= current_point).all(axis=1)
         )[0]
         self.steps_taken += 1
+        self.currently_achievable = achievable_ids
+
+    def requests_plot(self):
+        if self.steps_taken == 0:
+            achievable = self.non_dominated_known
+        else:
+            achievable = self.non_dominated_known[self.currently_achievable]
+        if len(achievable) == 0:
+            return (
+                [],
+                [],
+                self.preference_point,
+                self.ideal,
+                self.nadir,
+                self.steps_taken,
+            )
+        lower_bounds = achievable.min(axis=0)
+        upper_bounds = achievable.max(axis=0)
+        bounds = np.vstack((lower_bounds, upper_bounds)).T
         return (
+            bounds,
             self.non_dominated_known,
-            achievable_ids,
-            self.steps_taken,
-            current_point,
+            self.currently_achievable,
             self.preference_point,
+            self.previous_points_list[-1],
+            self.ideal,
+            self.nadir,
+            self.steps_taken,
+            self.num_steps,
+
         )
+
