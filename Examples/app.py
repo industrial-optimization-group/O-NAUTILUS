@@ -14,25 +14,27 @@ y = 1 / x
 
 
 method = ONAUTILUS(known_data=np.vstack((x, y)).T, optimistic_data=[], num_steps=20)
-method.preference_point = np.asarray([0.2, 4])
+# method.preference_point = np.asarray([0.2, 4])
 output = []
 
 
 def create_plot(request):
-    bounds, _, _, preference_point, current_point, ideal, nadir, steps_taken, total_steps = (
-        request
-    )
-    graphdata = zip(bounds, preference_point, current_point, ideal, nadir)
+    content = request.content
+    bounds = content["data"]
+    ideal_nadir = content["dimensions_data"]
+    preference_point = content["preference"]
+    total_steps = content["total_steps"]
+    steps_taken = content["steps_taken"]
 
     fig = make_subplots(
-        rows=len(ideal),
+        rows=ideal_nadir.shape[1],
         cols=1,
         shared_xaxes=True,
-        subplot_titles=[f"X{i}" for i in range(len(ideal))],
+        subplot_titles=list(ideal_nadir.columns),
     )
     fig.update_xaxes(title_text="Steps", row=2, col=1)
     fig.update_xaxes(range=[0, total_steps])
-    for i in range(len(ideal)):
+    for i in range(ideal_nadir.shape[1]):
         legend = True if i == 0 else False
         # lower bound
         fig.add_trace(
@@ -103,42 +105,50 @@ def create_plot(request):
             row=i + 1,
             col=1,
         )
-
-    for i, (bound, preference, current_val, ideal_val, nadir_val) in enumerate(
-        graphdata
-    ):
+    for i, objective_name in enumerate(ideal_nadir.columns):
         fig.data[5 * i + 0].x = fig.data[5 * i + 0].x + (steps_taken,)
         fig.data[5 * i + 1].x = fig.data[5 * i + 1].x + (steps_taken,)
         fig.data[5 * i + 2].x = fig.data[5 * i + 2].x + (steps_taken,)
         fig.data[5 * i + 3].x = fig.data[5 * i + 3].x + (steps_taken,)
         fig.data[5 * i + 4].x = fig.data[5 * i + 4].x + (steps_taken,)
-        fig.data[5 * i + 0].y = fig.data[5 * i + 0].y + (bound[0],)
-        fig.data[5 * i + 1].y = fig.data[5 * i + 1].y + (bound[1],)
-        fig.data[5 * i + 2].y = fig.data[5 * i + 2].y + (preference,)
-        fig.data[5 * i + 3].y = fig.data[5 * i + 3].y + (ideal_val,)
-        fig.data[5 * i + 4].y = fig.data[5 * i + 4].y + (nadir_val,)
+        fig.data[5 * i + 0].y = fig.data[5 * i + 0].y + (
+            bounds[objective_name]["lower_bound"],
+        )
+        fig.data[5 * i + 1].y = fig.data[5 * i + 1].y + (
+            bounds[objective_name]["upper_bound"],
+        )
+        fig.data[5 * i + 2].y = fig.data[5 * i + 2].y + (
+            preference_point[objective_name][0],
+        )
+        fig.data[5 * i + 3].y = fig.data[5 * i + 3].y + (
+            ideal_nadir[objective_name]["ideal"],
+        )
+        fig.data[5 * i + 4].y = fig.data[5 * i + 4].y + (
+            ideal_nadir[objective_name]["nadir"],
+        )
     return fig
 
 
 def extendplot(request):
-    bounds, _, _, preference_point, current_point, ideal, nadir, steps_taken, total_steps = (
-        request
-    )
-    graphdata = zip(bounds, preference_point, current_point, ideal, nadir)
+    content = request.content
+    bounds = content["data"]
+    ideal_nadir = content["dimensions_data"]
+    preference_point = content["preference"]
+    total_steps = content["total_steps"]
+    steps_taken = content["steps_taken"]
+
     extension = [dict(x=[], y=[]), []]
-    for i, (bound, preference, current_val, ideal_val, nadir_val) in enumerate(
-        graphdata
-    ):
+    for i, objective_name in enumerate(ideal_nadir.columns):
         extension[0]["x"].append([steps_taken])
         extension[0]["x"].append([steps_taken])
         extension[0]["x"].append([steps_taken])
         extension[0]["x"].append([steps_taken])
         extension[0]["x"].append([steps_taken])
-        extension[0]["y"].append([bound[0]])
-        extension[0]["y"].append([bound[1]])
-        extension[0]["y"].append([preference])
-        extension[0]["y"].append([ideal_val])
-        extension[0]["y"].append([nadir_val])
+        extension[0]["y"].append([bounds[objective_name]["lower_bound"]])
+        extension[0]["y"].append([bounds[objective_name]["upper_bound"]])
+        extension[0]["y"].append([preference_point[objective_name][0]])
+        extension[0]["y"].append([ideal_nadir[objective_name]["ideal"]])
+        extension[0]["y"].append([ideal_nadir[objective_name]["nadir"]])
         extension[1] = extension[1] + [
             5 * i,
             5 * i + 1,
@@ -150,21 +160,22 @@ def extendplot(request):
 
 
 def createscatter2d(request):
-    non_dom = request[1]
-    achievable = request[1][request[2]]
-    ideal = request[5]
-    nadir = request[6]
-    current = request[4]
-    preference = request[3]
+    non_dom = request.content["data"].values
+    achievable = non_dom[request.content["achievable_ids"]]
+    ideal = request.content["dimensions_data"].loc["ideal"]
+    nadir = request.content["dimensions_data"].loc["nadir"]
+    current = request.content["current_point"].values[0]
+    preference = request.content["preference"].values[0]
     figure = go.Figure()
     figure.update_layout(
-    title={
-        'text': "X1 = 1/X0",
-        'y':0.9,
-        'x':0.5,
-        'xanchor': 'center',
-        #'yanchor': 'top'
-        })
+        title={
+            "text": "X1 = 1/X0",
+            "y": 0.9,
+            "x": 0.5,
+            "xanchor": "center",
+            #'yanchor': 'top'
+        }
+    )
     figure.add_trace(
         go.Scatter(
             x=non_dom[:, 0],
@@ -185,8 +196,8 @@ def createscatter2d(request):
     return figure
 
 
-first_data = create_plot(method.requests_plot())
-scattergraph = createscatter2d(method.requests_plot())
+first_data = create_plot(method.request_ranges_plot())
+scattergraph = createscatter2d(method.request_solutions_plot())
 app = dash.Dash(__name__)
 
 app.layout = html.Div(
@@ -205,7 +216,27 @@ app.layout = html.Div(
             [dcc.Graph(id="scatter-graph", figure=scattergraph)],
             style={"width": "49%", "display": "inline-block"},
         ),
-        dcc.Interval(id="time", interval=1 * 1000, n_intervals=0),  # in milliseconds
+        html.Div(
+            [
+                dcc.Input(
+                    id=f"textbox{i+1}",
+                    placeholder=f"Enter a value for X{i+1}",
+                    type="float",
+                    value="",
+                )
+                for i in range(2)
+            ]
+        ),
+        dcc.Input(
+            id="textbox2", placeholder="Enter a value for X1", type="float", value=""
+        ),
+        html.Button("Pause", id="pausebutton"),
+        html.Button("Submit", id="submitbutton"),
+        dcc.Interval(
+            id="step_counter", interval=1 * 1000, n_intervals=0
+        ),  # in milliseconds
+        # Hidden div inside the app that stores the intermediate value
+        html.Div(id="preference_request", style={"display": "none"}),
     ]
 )
 
@@ -213,17 +244,48 @@ app.layout = html.Div(
 @app.callback(
     [
         Output(component_id="example-graph", component_property="extendData"),
-        Output(component_id="scatter-graph", component_property="figure"),
+        Output("scatter-graph", "figure"),
+        Output(component_id="step_counter", component_property="disabled"),
+        Output("preference_request", "children"),
+        Output("step_counter", "disabled"),
     ],
-    [Input(component_id="time", component_property="n_intervals")],
+    [
+        Input(component_id="step_counter", component_property="n_intervals"),
+        Input(component_id="pausebutton", component_property="n_clicks"),
+        Input(component_id="submitbutton", component_property="n_clicks"),
+    ],
+    [
+        State("preference_request", "children"),
+        [State(f"textbox{i+1}", "value") for i in range(2)],
+    ],
 )
 def iterate(n):
-    method.iterate()
-    output = method.requests_plot()
-    if len(output[2]) == 0:
-        return
+    ranges_plot_request, solutions_plot_request, preference_request = method.iterate()
+    if preference_request.interaction_priority == "required":
+        disable_step_counter = True
+        data_extension = None
+        scattergraph = None
     else:
-        return extendplot(output), createscatter2d(output)
+        disable_step_counter = False
+        data_extension = extendplot(ranges_plot_request)
+        scattergraph = createscatter2d(solutions_plot_request)
+    return (data_extension, scattergraph, disable_step_counter, preference_request)
+
+
+def pauseevent(clickdata):
+    if clickdata is None:
+        return False
+    elif clickdata % 2 == 1:
+        return True
+    return False
+
+
+
+def updatepreferences(*args):
+    request = args[-1]
+    preference = np.asarray([value for value in args[:-1]])
+    request.response = preference
+    method.iterate(request)
 
 
 if __name__ == "__main__":

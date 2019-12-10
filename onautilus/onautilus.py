@@ -1,6 +1,8 @@
 import numpy as np
+import pandas as pd
 from pygmo import fast_non_dominated_sorting as nds
 from typing import List
+from desdeo_tools.interaction.request import ReferencePointPreference, SimplePlotRequest
 
 
 class ONAUTILUS:
@@ -14,67 +16,128 @@ class ONAUTILUS:
         self.ideal = known_data.min(axis=0)
         self.non_dominated_known = known_data[nds(known_data)[0][0]]
         self.nadir = self.non_dominated_known.max(axis=0)
+
         self.steps_taken = 0
 
         self.nadir_to_ideal = self.ideal - self.nadir
-        #  self.step = self.nadir_to_ideal / np.linalg.norm(self.nadir_to_ideal)
-        self.step = self.nadir_to_ideal / num_steps
-        self.preference_point = self.ideal
-        self.preference_points_list = []
+        self.step_size = self.nadir_to_ideal / num_steps
+        # self.preference_point = self.ideal
+        self.preference_point = np.asarray([0.2, 4])
         self.current_point = self.nadir
-        self.previous_points_list = [self.nadir]
-        self.improvement_direction = None
-        self.currently_achievable: List = None
+        self.current_points_list = [self.nadir]
+        self.improvement_direction = self.preference_point - self.current_point
+        self.improvement_direction = self.improvement_direction / np.linalg.norm(
+            self.improvement_direction
+        )
+        self.currently_achievable: List = range(len(self.non_dominated_known))
+        self.achievable_ranges = np.vstack((self.ideal, self.nadir))
+        self.interaction_priority: str = "not_required"
 
-    def iterate(self, preference: np.ndarray = None):
-        self.preference_point = (
-            preference if preference is not None else self.preference_point
+    def iterate(self, preference: ReferencePointPreference = None):
+        if preference.response is None:
+            # Filler
+            pass
+        elif preference.response is not None:
+            self.preference_point = preference.response
+            self.improvement_direction = self.preference_point - self.current_point
+            self.improvement_direction = self.improvement_direction / np.linalg.norm(
+                self.improvement_direction
+            )
+            self.interaction_priority: str = "not_required"
+        #  Actual step calculation
+        cos_theta = np.dot(self.improvement_direction, self.step_size) / (
+            np.linalg.norm(self.step_size)
         )
-        self.preference_points_list.append(self.preference_point)
-        previous_point = self.previous_points_list[-1]
-        improvement_direction = self.preference_point - previous_point
-        improvement_direction = improvement_direction / np.linalg.norm(
-            improvement_direction
-        )
-        cos_theta = np.dot(improvement_direction, self.step) / (
-            np.linalg.norm(self.step)
-        )
-        step = improvement_direction * np.linalg.norm(self.step) / cos_theta
-        current_point = previous_point + step
-        self.previous_points_list.append(current_point)
+        step = self.improvement_direction * np.linalg.norm(self.step_size) / cos_theta
+        #  Taking the step forward
+        current_point = self.current_point + step
+        #  Finding non-dominated points that are still achievable
         achievable_ids = np.nonzero(
             (self.non_dominated_known <= current_point).all(axis=1)
         )[0]
-        self.steps_taken += 1
-        self.currently_achievable = achievable_ids
-
-    def requests_plot(self):
-        if self.steps_taken == 0:
-            achievable = self.non_dominated_known
+        if len(achievable_ids) == 0:
+            self.interaction_priority = "required"
+        #  Finding achievable ranges
         else:
+            self.current_point = current_point
+            self.currently_achievable = achievable_ids
             achievable = self.non_dominated_known[self.currently_achievable]
-        if len(achievable) == 0:
-            return (
-                [],
-                [],
-                self.preference_point,
-                self.ideal,
-                self.nadir,
-                self.steps_taken,
-            )
-        lower_bounds = achievable.min(axis=0)
-        upper_bounds = achievable.max(axis=0)
-        bounds = np.vstack((lower_bounds, upper_bounds)).T
-        return (
-            bounds,
-            self.non_dominated_known,
-            self.currently_achievable,
-            self.preference_point,
-            self.previous_points_list[-1],
-            self.ideal,
-            self.nadir,
-            self.steps_taken,
-            self.num_steps,
+            lower_bounds = achievable.min(axis=0)
+            upper_bounds = achievable.max(axis=0)
+            self.current_points_list.append(current_point)
+            self.achievable_ranges = np.vstack((lower_bounds, upper_bounds))
+            self.steps_taken += 1
+        return self.requests()
 
+    def requests(self):
+        return (
+            self.request_ranges_plot(),
+            self.request_solutions_plot(),
+            self.request_preferences(),
         )
 
+    def request_ranges_plot(self):
+        objective_names = [f"X{i + 1}" for i in range(self.achievable_ranges.shape[1])]
+        data = pd.DataFrame(
+            self.achievable_ranges,
+            index=["lower_bound", "upper_bound"],
+            columns=objective_names,
+        )
+        dimensions_data = pd.DataFrame(
+            np.vstack((np.ones_like(self.ideal), self.ideal, self.nadir)),
+            index=["minimize", "ideal", "nadir"],
+            columns=objective_names,
+        )
+        request = SimplePlotRequest(
+            data=data, dimensions_data=dimensions_data, message="blah"
+        )
+        request.content["steps_taken"] = self.steps_taken
+        request.content["current_point"] = pd.DataFrame(
+            [self.current_point], columns=objective_names
+        )
+        request.content["total_steps"] = self.num_steps
+        request.content["preference"] = pd.DataFrame(
+            [self.preference_point], columns=objective_names
+        )
+        return request
+
+    def request_preferences(self):
+        objective_names = [
+            f"X{i + 1}" for i in range(self.achievable_ranges.shape[1])
+        ]
+        data = pd.DataFrame(
+            np.vstack((np.ones_like(self.ideal), self.achievable_ranges)),
+            index=["minimize", "ideal", "nadir"],
+            columns=objective_names,
+        )
+        message = (
+            "Provide a new reference point between the achievable ideal "
+            "and current nadir point"
+        )
+        return ReferencePointPreference(
+            dimensions_data=data,
+            message=message,
+            interaction_priority=self.interaction_priority,
+        )
+
+    def request_solutions_plot(self):
+        objective_names = [f"X{i + 1}" for i in range(self.achievable_ranges.shape[1])]
+        data = pd.DataFrame(
+            self.non_dominated_known, columns=objective_names
+        )
+        dimensions_data = pd.DataFrame(
+            np.vstack((np.ones_like(self.ideal), self.ideal, self.nadir)),
+            index=["minimize", "ideal", "nadir"],
+            columns=objective_names,
+        )
+        request =  SimplePlotRequest(
+            data=data, dimensions_data=dimensions_data, message="blah"
+        )
+        request.content["achievable_ids"] = self.currently_achievable
+        request.content["current_point"] = pd.DataFrame(
+            [self.current_point], columns=objective_names
+        )
+        request.content["preference"] = pd.DataFrame(
+            [self.preference_point], columns=objective_names
+        )
+        return request
