@@ -38,13 +38,14 @@ class ONAUTILUS:
             # Filler
             pass
         elif preference.response is not None:
-            self.preference_point = preference.response
+            self.preference_point = preference.response.values[0]
             self.improvement_direction = self.preference_point - self.current_point
             self.improvement_direction = self.improvement_direction / np.linalg.norm(
                 self.improvement_direction
             )
             self.interaction_priority: str = "not_required"
         #  Actual step calculation
+        print(self.preference_point)
         cos_theta = np.dot(self.improvement_direction, self.step_size) / (
             np.linalg.norm(self.step_size)
         )
@@ -141,3 +142,7 @@ class ONAUTILUS:
             [self.preference_point], columns=objective_names
         )
         return request
+
+    def continue_optimization(self) -> bool:
+        # TODO chech if the following is correct (+- 1)
+        return self.steps_taken < self.num_steps

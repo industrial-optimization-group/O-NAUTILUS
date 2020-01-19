@@ -198,6 +198,8 @@ def createscatter2d(request):
 
 first_data = create_plot(method.request_ranges_plot())
 scattergraph = createscatter2d(method.request_solutions_plot())
+first_pref = method.preference_point
+preference_request = method.request_preferences()
 app = dash.Dash(__name__)
 
 app.layout = html.Div(
@@ -221,22 +223,20 @@ app.layout = html.Div(
                 dcc.Input(
                     id=f"textbox{i+1}",
                     placeholder=f"Enter a value for X{i+1}",
-                    type="float",
-                    value="",
+                    type="number",
+                    value=first_pref[i],  # TODO remove
+                    disabled=True,
                 )
                 for i in range(2)
             ]
         ),
-        dcc.Input(
-            id="textbox2", placeholder="Enter a value for X1", type="float", value=""
-        ),
         html.Button("Pause", id="pausebutton"),
-        html.Button("Submit", id="submitbutton"),
+        html.Button("Submit", id="submitbutton", disabled=True),
         dcc.Interval(
             id="step_counter", interval=1 * 1000, n_intervals=0
         ),  # in milliseconds
         # Hidden div inside the app that stores the intermediate value
-        html.Div(id="preference_request", style={"display": "none"}),
+        html.Div(id="preference_values_container", style={"display": "none"}),
     ]
 )
 
@@ -245,40 +245,62 @@ app.layout = html.Div(
     [
         Output(component_id="example-graph", component_property="extendData"),
         Output("scatter-graph", "figure"),
-        Output(component_id="step_counter", component_property="disabled"),
-        Output("preference_request", "children"),
-        Output("step_counter", "disabled"),
+        Output("pausebutton", "n_clicks"),
     ],
-    [
-        Input(component_id="step_counter", component_property="n_intervals"),
-        Input(component_id="pausebutton", component_property="n_clicks"),
-        Input(component_id="submitbutton", component_property="n_clicks"),
-    ],
-    [
-        State("preference_request", "children"),
-        [State(f"textbox{i+1}", "value") for i in range(2)],
-    ],
+    [Input(component_id="step_counter", component_property="n_intervals")],
+    [State("preference_values_container", "children")],
 )
-def iterate(n):
-    ranges_plot_request, solutions_plot_request, preference_request = method.iterate()
+def iterate(n, preference_values):
+    global preference_request
+    ranges_plot_request, solutions_plot_request, preference_request = method.iterate(
+        preference_request
+    )
     if preference_request.interaction_priority == "required":
-        disable_step_counter = True
         data_extension = None
-        scattergraph = None
+        scattergraph = createscatter2d(solutions_plot_request)
+        click_pause = 1
     else:
-        disable_step_counter = False
         data_extension = extendplot(ranges_plot_request)
         scattergraph = createscatter2d(solutions_plot_request)
-    return (data_extension, scattergraph, disable_step_counter, preference_request)
+        click_pause = None
+    return (data_extension, scattergraph, click_pause)
 
 
-def pauseevent(clickdata):
-    if clickdata is None:
-        return False
-    elif clickdata % 2 == 1:
-        return True
-    return False
+@app.callback(
+    [
+        Output("step_counter", "disabled"),
+        Output("pausebutton", "children"),
+        Output("submitbutton", "disabled"),
+        *[Output(f"textbox{i+1}", "disabled") for i in range(2)],
+        # *[Output(f"textbox{i+1}", "value") for i in range(2)]
+    ],
+    [Input("pausebutton", "n_clicks")],
+    [State("pausebutton", "children")],
+)
+def pauseevent(pauseclick, pausevalue):
+    if pauseclick is None:
+        # Prevents pausing when initializing or other non-pausing events
+        return (False, "Pause", True, True, True)
+        # return (True, "Play", False, False, False)
+    if pausevalue == "Pause":
+        return (True, "Play", False, False, False)
+    elif pausevalue == "Play":
+        return (False, "Pause", True, True, True)
 
+
+@app.callback(
+    Output("preference_values_container", "children"),
+    [Input("submitbutton", "n_clicks")],
+    [*[State(f"textbox{i+1}", "value") for i in range(2)]],
+)
+def submitevent(submitclick, *preference_values):
+    global preference_request
+    pref_value = pd.DataFrame(
+        [preference_values],
+        columns=preference_request.content["dimensions_data"].columns,
+    )
+    preference_request.response = pref_value
+    return preference_values
 
 
 def updatepreferences(*args):
@@ -289,4 +311,4 @@ def updatepreferences(*args):
 
 
 if __name__ == "__main__":
-    app.run_server()
+    app.run_server(debug=True)
