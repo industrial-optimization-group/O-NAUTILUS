@@ -303,12 +303,5 @@ def submitevent(submitclick, *preference_values):
     return preference_values
 
 
-def updatepreferences(*args):
-    request = args[-1]
-    preference = np.asarray([value for value in args[:-1]])
-    request.response = preference
-    method.iterate(request)
-
-
 if __name__ == "__main__":
     app.run_server(debug=True)
