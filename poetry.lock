@@ -274,6 +274,17 @@ Flask = "*"
 
 [[package]]
 category = "main"
+description = "Adds server-side session support to your Flask application"
+name = "flask-session"
+optional = false
+python-versions = "*"
+version = "0.3.1"
+
+[package.dependencies]
+Flask = ">=0.8"
+
+[[package]]
+category = "main"
 description = "Clean single-source support for Python 3 and 2"
 name = "future"
 optional = false
@@ -729,6 +740,14 @@ cloudpickle = "*"
 numpy = "*"
 
 [[package]]
+category = "main"
+description = "Quick and small memcached client for Python"
+name = "pylibmc"
+optional = false
+python-versions = "*"
+version = "1.6.1"
+
+[[package]]
 category = "dev"
 description = "python code static checker"
 name = "pylint"
@@ -989,7 +1008,7 @@ version = "0.6.0"
 more-itertools = "*"
 
 [metadata]
-content-hash = "212ecdb12338368deda3dd0a4327bc40096ee3c3c3c70f6f8e43fa0dbc1f09ed"
+content-hash = "6bf2122158b86b0acc85ba64bcd9680c77c925513867a97dc7caa5f528ead663"
 python-versions = "^3.7"
 
 [metadata.hashes]
@@ -1018,6 +1037,7 @@ entrypoints = ["589f874b313739ad35be6e0cd7efde2a4e9b6fea91edcc34e58ecbb8dbe56d19
 flake8 = ["45681a117ecc81e870cbf1262835ae4af5e7a8b08e40b944a8a6e6b895914cfb", "49356e766643ad15072a789a20915d3c91dc89fd313ccd71802303fd67e4deca"]
 flask = ["13f9f196f330c7c2c5d7a5cf91af894110ca0215ac051b5844701f2bfd934d52", "45eb5a6fd193d6cf7e0cf5d8a5b31f83d5faae0293695626f539a823e93b13f6"]
 flask-compress = ["468693f4ddd11ac6a41bca4eb5f94b071b763256d54136f77957cfee635badb3"]
+flask-session = ["a31c27e0c3287f00c825b3d9625aba585f4df4cccedb1e7dd5a69a215881a731", "b9b32126bfc52c3169089f2ed9a40e34b589527bda48b633428e07d39d9c8792"]
 future = ["b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"]
 importlib-metadata = ["b044f07694ef14a6683b097ba56bd081dbc7cdc7c7fe46011e499dfecc082f21", "e6ac600a142cf2db707b1998382cc7fc3b02befb7273876e01b8ad10b9652742"]
 ipykernel = ["1a7def9c986f1ee018c1138d16951932d4c9d4da01dad45f9d34e9899565a22f", "b368ad13edb71fa2db367a01e755a925d7f75ed5e09fbd3f06c85e7a8ef108a8"]
@@ -1058,6 +1078,7 @@ pydoe = ["cbd6f14ae26d3c9f736013205f53ea1191add4567033c3ee77b7dd356566c4b6"]
 pyflakes = ["17dbeb2e3f4d772725c777fabc446d5634d1038f234e77343108ce445ea69ce0", "d976835886f8c5b31d47970ed689944a0262b5f3afa00a5a7b4dc81e5449f8a2"]
 pygments = ["2a3fe295e54a20164a9df49c75fa58526d3be48e14aceba6d6b1e8ac0bfd6f1b", "98c8aa5a9f778fcd1026a17361ddaf7330d1b7c62ae97c3bb0ae73e0b9b6b0fe"]
 pygmo = ["45449d1e1534d36ef619fd4fd17f9b95411ec86d0c34182ed45c4ea5ea92a533", "7f11bc0f256eca241f97c410d1770fd777f8b3b984d1affc6867b7ee92cf6d7d", "829d7c120496d19b6212cc447c63fec240b164666cc4dcf29f2b50b106d10d92", "952f63a461ea702e0028bc39d74acdab53cfbdca8bdab0f3956d1e9a22dc42dc", "bbb2993741b4ebd3525f5128b00f04491e7a3774b5d8fb0faab032eb5282199e", "cd3ed6c7cdfa1388dabe9ecaf32029a24dedfe570c13d90aed0a4369fc1032cd", "dfb156e190981caf3365c34099171138c7f26c5af28bb35683b8c50acb307c59"]
+pylibmc = ["01a7e2e3fa9fcd7a791c7818a80a07e7a381aee988a5d810a1c1e6f7a9a288fd", "6fff384e3c30af029bbac87f88b3fab14ae87b50103d389341d9b3e633349a3f", "8a8dd406487d419d58c6d944efd91e8189b360a0c4d9e8c6ebe3990d646ae7e9", "c749b4251c1137837d00542b62992b96cd2aed639877407f66291120dd6de2ff", "e6c0c452336db0868d0de521d48872c2a359b1233b974c6b32c36ce68abc4820"]
 pylint = ["3db5468ad013380e987410a8d6956226963aed94ecb5f9d3a28acca6d9ac36cd", "886e6afc935ea2590b462664b161ca9a5e40168ea99e5300935f6591ad467df4"]
 pyreadline = ["4530592fc2e85b25b1a9f79664433da09237c1a270e4d78ea5aa3a2c7229e2d1", "65540c21bfe14405a3a77e4c085ecfce88724743a4ead47c66b84defcf82c32e", "9ce5fa65b8992dfa373bddc5b6e0864ead8f291c94fbfec05fbd5c836162e67b"]
 pyrsistent = ["f3b280d030afb652f79d67c5586157c5c1355c9a58dfc7940566e28d28f3df1b"]

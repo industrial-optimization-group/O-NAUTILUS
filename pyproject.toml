@@ -9,6 +9,9 @@ license = "MIT"
 python = "^3.7"
 desdeo-emo = "^0.1.2"
 dash = "^1.7"
+desdeo_emo = "^0.1.2"
+Flask-Session = "^0.3.1"
+pylibmc = "^1.6"
 
 [tool.poetry.dev-dependencies]
 flake8 = {version = "^3.7"}
