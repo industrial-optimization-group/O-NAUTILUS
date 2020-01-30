@@ -43,16 +43,11 @@ app.layout = html.Div(
             multiple=True,
         ),
         html.Div(id="output-data-upload"),
+        html.Button("Previous", id="prev_data_upload"),
+        html.Button("Home", id="home_data_upload"),
+        html.Button("Next", id="next_data_upload"),
     ]
 )
-
-
-class randomclass:
-    def __init__(self, content):
-        self.content = content
-
-    def returncontent(self):
-        return self.content
 
 
 def parse_contents(contents, filename, date):
@@ -86,10 +81,13 @@ def parse_contents(contents, filename, date):
         print(e)
         return html.Div(["There was an error processing this file."])
 
+    return df
+
+
+def create_datatable(df, filename):
     layout = html.Div(
         [
             html.H5(filename),
-            html.H6(datetime.datetime.fromtimestamp(date)),
             dash_table.DataTable(
                 data=df.to_dict("records"),
                 columns=[{"name": i, "id": i} for i in df.columns],
@@ -106,14 +104,13 @@ def parse_contents(contents, filename, date):
 )
 def update_layout(list_of_contents, list_of_names, list_of_dates):
     if list_of_contents is not None:
-        session["children"] = randomclass(
-            [
-                parse_contents(c, n, d)
-                for c, n, d in zip(list_of_contents, list_of_names, list_of_dates)
-            ]
-        )
-
-        return session.get("children").returncontent()
+        data_df = [
+            parse_contents(c, n, d)
+            for c, n, d in zip(list_of_contents, list_of_names, list_of_dates)
+        ][0]
+        session["original_dataset"] = data_df
+        layout = create_datatable(data_df, list_of_names[0])
+        return layout
 
 
 if __name__ == "__main__":
