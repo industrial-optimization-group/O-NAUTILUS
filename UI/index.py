@@ -2,25 +2,27 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 
-from app import app
-from pages import app1, app2
+
+from UI.app import app
+from UI.pages import data_upload, problem_formulation, train_model
 
 
-app.layout = html.Div([
-    dcc.Location(id='url', refresh=False),
-    html.Div(id='page-content')
-])
+app.layout = html.Div(
+    [dcc.Location(id="url", refresh=False), html.Div(id="page-content")]
+)
 
 
-@app.callback(Output('page-content', 'children'),
-              [Input('url', 'pathname')])
+@app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def display_page(pathname):
-    if pathname == '/apps/app1':
-        return app1.layout
-    elif pathname == '/apps/app2':
-        return app2.layout
+    if pathname == "/upload/":
+        return data_upload.layout()
+    elif pathname == "/problem/":
+        return problem_formulation.layout()
+    elif pathname == "/train/":
+        return train_model.layout()
     else:
-        return '404'
+        return "404"
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run_server(debug=True)

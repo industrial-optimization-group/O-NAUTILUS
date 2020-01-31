@@ -1,53 +1,43 @@
 import base64
-import datetime
 import io
-from flask_session import Session
-from flask import session
 
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Input, Output, State
-
 import pandas as pd
-
-app = dash.Dash(__name__)
-app.server.secret_key = '_5#y2L"F4Q8z]/'
-app.server.config.from_object("config.Config")
-app.server.config["SESSION_TYPE"] = "filesystem"
+from dash.dependencies import Input, Output, State
+from flask import session
 
 
-sess = Session()
-sess.init_app(app.server)
+from UI.app import app
 
 
-app.layout = html.Div(
-    [
-        dcc.Upload(
-            id="upload-data",
-            children=html.Div(["Drag and Drop or ", html.A("Select Files")]),
-            style={
-                "width": "100%",
-                "height": "60px",
-                "lineHeight": "60px",
-                "borderWidth": "1px",
-                "borderStyle": "dashed",
-                "borderRadius": "5px",
-                "textAlign": "center",
-                "margin": "10px",
-            },
-            # Allow multiple files to be uploaded
-            multiple=True,
-        ),
-        html.Div(id="output-data-upload"),
-        html.Button("Previous", id="prev_data_upload"),
-        html.Button("Home", id="home_data_upload"),
-        html.Button("Next", id="next_data_upload"),
-    ]
-)
+def layout():
+    return html.Div(
+        [
+            html.H1("Data Upload", id="header_data_upload"),
+            dcc.Upload(
+                id="upload-data",
+                children=html.Div(["Drag and Drop or ", html.A("Select Files")]),
+                style={
+                    "width": "100%",
+                    "height": "60px",
+                    "lineHeight": "60px",
+                    "borderWidth": "1px",
+                    "borderStyle": "dashed",
+                    "borderRadius": "5px",
+                    "textAlign": "center",
+                    "margin": "10px",
+                },
+                # Allow multiple files to be uploaded
+                multiple=True,
+            ),
+            html.Div(id="output-data-upload"),
+            html.Button("Previous", id="prev_data_upload"),
+            html.Button("Home", id="home_data_upload"),
+            html.Button("Next", id="next_data_upload"),
+        ]
+    )
 
 
 def parse_contents(contents, filename, date):
@@ -111,7 +101,3 @@ def update_layout(list_of_contents, list_of_names, list_of_dates):
         session["original_dataset"] = data_df
         layout = create_datatable(data_df, list_of_names[0])
         return layout
-
-
-if __name__ == "__main__":
-    app.run_server(debug=True)
