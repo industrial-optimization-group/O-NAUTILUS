@@ -4,7 +4,7 @@ from dash.dependencies import Input, Output
 
 
 from UI.app import app
-from UI.pages import data_upload, problem_formulation, train_model
+from UI.pages import data_upload, problem_formulation, train_model, optimize
 
 
 app.layout = html.Div(
@@ -20,6 +20,8 @@ def display_page(pathname):
         return problem_formulation.layout()
     elif pathname == "/train/":
         return train_model.layout()
+    elif pathname == "/optimize/":
+        return optimize.layout()
     else:
         return "404"
 

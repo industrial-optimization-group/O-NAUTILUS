@@ -45,6 +45,12 @@ def layout():
                     ),
                 ]
             ),
+            html.Label(
+                [
+                    "Provide analytical functions",
+                    html.Div(id="analytical_function_inputs", children=[]),
+                ]
+            ),
         ]
     )
 
@@ -54,7 +60,7 @@ def layout():
     [Input("decision_variables", "value")],
     [State("column_names", "children")],
 )
-def update_objectives(decision_variable_names, all_names):
+def add_decision_vars(decision_variable_names, all_names):
     if decision_variable_names is None:
         raise PreventUpdate
     session["decision_variable_names"] = decision_variable_names
@@ -70,11 +76,14 @@ def update_objectives(decision_variable_names, all_names):
 
 
 @app.callback(
-    Output("decision_variables", "options"),
+    [
+        Output("decision_variables", "options"),
+        Output("analytical_function_inputs", "children"),
+    ],
     [Input("objectives", "value")],
     [State("column_names", "children")],
 )
-def update_decision_variables(objective_names, all_names):
+def add_objectives(objective_names, all_names):
     if objective_names is None:
         raise PreventUpdate
     session["objective_names"] = objective_names
@@ -86,4 +95,19 @@ def update_decision_variables(objective_names, all_names):
         }
         for name in all_names
     ]
-    return decision_variable_names_restricted_options
+
+    analytical_function_inputs = [
+        html.Label(
+            [
+                f"Enter the analytical function for {objective}",
+                dcc.Input(
+                    placeholder=f"Enter the analytical function for {objective}",
+                    type="text",
+                    value="",
+                ),
+            ]
+        )
+        for objective in objective_names
+    ]
+
+    return (decision_variable_names_restricted_options, analytical_function_inputs)

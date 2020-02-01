@@ -10,6 +10,7 @@ import numpy as np
 
 from UI.app import app
 
+from desdeo_problem.Problem import DataProblem
 from desdeo_problem.surrogatemodels.SurrogateModels import GaussianProcessRegressor
 from desdeo_problem.surrogatemodels.lipschitzian import LipschitzianRegressor
 from sklearn.metrics import r2_score
@@ -38,7 +39,7 @@ def layout():
                         ),
                     ]
                 ),
-                dcc.Loading(html.Button("Train models", id="train_models")),
+                dcc.Loading([html.Button("Train models", id="train_models")]),
                 html.Div(
                     id="results_selection_train_models",
                     hidden=True,
@@ -79,10 +80,19 @@ def train_all_models(button_clicked, chosen_technique):
     objective_names = session["objective_names"]
     variable_names = session["decision_variable_names"]
     data = session["original_dataset"]
-    for objective in objective_names:
+    problem = DataProblem(
+        data=data, objective_names=objective_names, variable_names=variable_names
+    )
+    # Use the following what analytical problems are supported.
+    # Get problem from previous page instead of creating one here.
+
+    # problem = session["problem"]
+    problem.train(regressor)
+    session["problem"] = problem
+    """for objective in objective_names:
         model = regressor()
         model.fit(data[variable_names].values, data[objective].values)
-        session[objective + "_model"] = model
+        session[objective + "_model"] = model"""
     return [False, False, objective_names[0]]
 
 
@@ -98,9 +108,14 @@ def show_results(objective):
         raise PreventUpdate
     data = session["original_dataset"]
     variable_names = session["decision_variable_names"]
-    model = session[objective + "_model"]
+    # model = session[objective + "_model"]
+    problem = session["problem"]
     y_true = data[objective]
-    y_pred_mean, y_pred_std = model.predict(data[variable_names].values)
+    # y_pred_mean, y_pred_std = model.predict(data[variable_names].values)
+    y_pred_mean_all = problem.evaluate(
+        data[variable_names].values, use_surrogate=True
+    ).objectives
+    y_pred_mean = y_pred_mean_all[:, problem.objective_names.index(objective)]
     r2_value = r2_score(y_true, y_pred_mean)
     r2_message = f"R2 score for model on objective {objective}: {r2_value}"
     figure = go.Figure()
