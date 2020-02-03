@@ -23,44 +23,42 @@ regressors = {
 
 def layout():
     objective_names = session["objective_names"]
-    return (
-        html.Div(
-            [
-                html.Label(
-                    [
-                        "Choose the surrogate modelling technique",
-                        dcc.Dropdown(
-                            id="surrogate_modelling_technique",
-                            options=[
-                                {"label": regressor, "value": regressor}
-                                for regressor in regressors
-                            ],
-                            value="Gaussian Process Regressor",
-                        ),
-                    ]
-                ),
-                dcc.Loading([html.Button("Train models", id="train_models")]),
-                html.Div(
-                    id="results_selection_train_models",
-                    hidden=True,
-                    children=dcc.Dropdown(
-                        id="results_selection_train_models_dropdown",
+    return html.Div(
+        [
+            html.Label(
+                [
+                    "Choose the surrogate modelling technique",
+                    dcc.Dropdown(
+                        id="surrogate_modelling_technique",
                         options=[
-                            {"label": objective, "value": objective}
-                            for objective in objective_names
+                            {"label": regressor, "value": regressor}
+                            for regressor in regressors
                         ],
+                        value="Gaussian Process Regressor",
                     ),
-                ),
-                html.Div(
-                    id="results_train_model",
-                    hidden=True,
-                    children=[
-                        dcc.Markdown(id="results_text_train_models"),
-                        html.Div(id="results_graph_train_models"),
+                ]
+            ),
+            dcc.Loading([html.Button("Train models", id="train_models")]),
+            html.Div(
+                id="results_selection_train_models",
+                hidden=True,
+                children=dcc.Dropdown(
+                    id="results_selection_train_models_dropdown",
+                    options=[
+                        {"label": objective, "value": objective}
+                        for objective in objective_names
                     ],
                 ),
-            ]
-        ),
+            ),
+            html.Div(
+                id="results_train_model",
+                hidden=True,
+                children=[
+                    dcc.Markdown(id="results_text_train_models"),
+                    html.Div(id="results_graph_train_models"),
+                ],
+            ),
+        ]
     )
 
 

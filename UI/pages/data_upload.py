@@ -33,9 +33,6 @@ def layout():
                 multiple=True,
             ),
             html.Div(id="output-data-upload"),
-            html.Button("Previous", id="prev_data_upload"),
-            html.Button("Home", id="home_data_upload"),
-            html.Button("Next", id="next_data_upload"),
         ]
     )
 

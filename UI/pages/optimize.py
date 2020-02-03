@@ -65,10 +65,13 @@ def optimize(clicked, chosen_algorithm):
         raise PreventUpdate
     problem = session["problem"]
     original_data_y = session["original_dataset"][problem.objective_names].values
-    evolver = optimizers[chosen_algorithm](problem, use_surrogates=True)
-    while evolver.continue_evolution():
-        evolver.iterate()
-    objectives = evolver.population.objectives
+    optimizer = optimizers[chosen_algorithm](problem, use_surrogates=True)
+    while optimizer.continue_evolution():
+        optimizer.iterate()
+
+    session["optimizer"] = optimizer
+
+    objectives = optimizer.population.objectives
     """data = pd.DataFrame(objectives, columns=problem.objective_names)
     fig = ex.parallel_coordinates(data)
     fig_obj = dcc.Graph(figure=fig)"""
@@ -95,7 +98,7 @@ def optimize(clicked, chosen_algorithm):
             name="Front from surrogates",
         )
     )
-    individuals = evolver.population.individuals
+    individuals = optimizer.population.individuals
     ##### TRUE FUNCTION EVALUATIONS; REPLACE THIS
     # TODO
     y1 = individuals.sum(axis=1)
