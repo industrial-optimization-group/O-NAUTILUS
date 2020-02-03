@@ -12,20 +12,44 @@ from UI.pages import (
     train_model,
     optimize,
     navigator_2_fronts,
+    coloring_parallel_coords,
 )
 
-o_nautilus_page_order = ["/upload", "/problem", "/train", "/optimize", "/navigate"]
-o_nautilus_pages = {
+pages = {
     "/upload": data_upload,
     "/problem": problem_formulation,
     "/train": train_model,
     "/optimize": optimize,
     "/navigate": navigator_2_fronts,
+    "/colour": coloring_parallel_coords,
 }
 
+o_nautilus_page_order = ["/upload", "/problem", "/train", "/optimize", "/navigate"]
+parallel_coords_colouring_order = ["/upload", "/problem", "/colour"]
 
-home_layout = html.Div(
-    [dcc.Location(id="url", refresh=False), html.Div(id="page-content", children=[])]
+
+layout = html.Div(
+    [
+        dcc.Location(id="url", refresh=False),
+        html.Div(id="page-content", children=[]),
+        html.Div(id="app_choice", children=None, hidden=True),
+    ]
+)
+
+home_page = html.Div(
+    [
+        html.H1("Choose an application"),
+        dcc.Link(
+            html.Button("O-NAUTILUS", id="onautilus_button", n_clicks_timestamp=-1),
+            href="/upload#O-NAUTILUS",
+        ),
+        dcc.Link(
+            html.Button(
+                "Coloured Parallel Coordinates", id="cpc_button", n_clicks_timestamp=-1
+            ),
+            href="/upload#CPC",
+        ),
+    ]
 )
 
 buttons = [
@@ -40,28 +64,66 @@ buttons = [
 ]
 
 
-app.layout = home_layout
+app.layout = layout
 
 
-@app.callback(Output("page-content", "children"), [Input("url", "pathname")])
-def display_page(pathname):
+@app.callback(
+    Output("page-content", "children"),
+    [Input("url", "pathname")],
+    [State("url", "hash")],
+)
+def display_page(pathname, app_choice):
     if pathname == "/":
-        print("hi2")
-        return buttons
-    elif pathname in o_nautilus_pages:
-        layout = o_nautilus_pages[pathname].layout()
+        return home_page
+    elif pathname in pages:
+        layout = pages[pathname].layout()
         layout.children.extend(deepcopy(buttons))
-        current_page_index = o_nautilus_page_order.index(pathname)
-        if current_page_index != 0:
-            layout.children[-3].href = o_nautilus_page_order[current_page_index - 1]
-        if current_page_index != len(o_nautilus_page_order) - 1:
-            layout.children[-1].href = o_nautilus_page_order[current_page_index + 1]
+        if app_choice == "#O-NAUTILUS":
+            current_page_index = o_nautilus_page_order.index(pathname)
+            if current_page_index != 0:
+                layout.children[-3].href = (
+                    o_nautilus_page_order[current_page_index - 1] + "#O-NAUTILUS"
+                )
+            if current_page_index != len(o_nautilus_page_order) - 1:
+                layout.children[-1].href = (
+                    o_nautilus_page_order[current_page_index + 1] + "#O-NAUTILUS"
+                )
+        elif app_choice == "#CPC":
+            current_page_index = parallel_coords_colouring_order.index(pathname)
+            if current_page_index != 0:
+                layout.children[-3].href = (
+                    parallel_coords_colouring_order[current_page_index - 1] + "#CPC"
+                )
+            if current_page_index != len(parallel_coords_colouring_order) - 1:
+                layout.children[-1].href = (
+                    parallel_coords_colouring_order[current_page_index + 1] + "#CPC"
+                )
+        else:
+            return "404"
         return layout
     else:
         return "404"
 
 
-@app.callback(
+"""@app.callback(
+    Output("app_choice", "children"),
+    [
+        Input("onautilus_button", "n_clicks_timestamp"),
+        Input("cpc_button", "n_clicks_timestamp"),
+    ],
+    [State("app_choice", "children")],
+)
+def app_choice(onautilus_button_time, cpc_button_time, app_choice_state):
+    if app_choice_state is None:
+        raise PreventUpdate
+    if onautilus_button_time > cpc_button_time:
+        return "O-NAUTILUS"
+    elif cpc_button_time > onautilus_button_time:
+        return "CPC"
+    raise PreventUpdate"""
+
+
+"""@app.callback(
     Output("url", "pathname"),
     [
         Input("next_button", "n_clicks"),
@@ -112,7 +174,7 @@ def prev_button_press(pathname):
 
 def home_button_press(clicked, pathname):
     return ""
-
+"""
 
 if __name__ == "__main__":
     app.run_server(debug=False)

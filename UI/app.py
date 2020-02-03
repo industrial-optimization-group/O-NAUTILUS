@@ -15,7 +15,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.server.secret_key = "".join(
     random.choices(string.ascii_letters + string.digits, k=16)
 )
-#app.server.config.from_object("config.Config")
+# app.server.config.from_object("config.Config")
 app.server.config["SECRET_KEY"] = environ.get("SECRET_KEY")
 app.server.config["FLASK_APP"] = environ.get("FLASK_APP")
 app.server.config["FLASK_ENV"] = environ.get("FLASK_ENV")
