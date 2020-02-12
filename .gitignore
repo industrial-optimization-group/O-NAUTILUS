@@ -1,6 +1,6 @@
 .vscode/
 flask_session*/
-
+outcmaes/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
