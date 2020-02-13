@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+import numpy as np
 
 from plotly.subplots import make_subplots
 
@@ -30,6 +31,21 @@ def create_navigator_plot(request):
             row=i + 1,
             col=1,
         )
+        # Optimistic upper bound
+        fig.add_trace(
+            go.Scatter(
+                x=[],
+                y=[],
+                fill="tonexty",
+                name=f"Optimistic Reachable area",
+                mode="lines+markers",
+                line_color="green",
+                fillcolor="yellow",
+                showlegend=legend,
+            ),
+            row=i + 1,
+            col=1,
+        )
         # lower bound
         fig.add_trace(
             go.Scatter(
@@ -39,8 +55,6 @@ def create_navigator_plot(request):
                 showlegend=False,
                 mode="lines+markers",
                 line_color="green",
-                fill="tonexty",
-                fillcolor="yellow",
             ),
             row=i + 1,
             col=1,
@@ -54,21 +68,7 @@ def create_navigator_plot(request):
                 name=f"Reachable area",
                 mode="lines+markers",
                 line_color="green",
-                showlegend=legend,
-            ),
-            row=i + 1,
-            col=1,
-        )
-        # Optimistic upper bound
-        fig.add_trace(
-            go.Scatter(
-                x=[],
-                y=[],
-                fill="tonexty",
-                name=f"Optimistic Reachable area",
-                mode="lines+markers",
-                line_color="green",
-                fillcolor="yellow",
+                fillcolor="green",
                 showlegend=legend,
             ),
             row=i + 1,
@@ -126,15 +126,22 @@ def extend_navigator_plot(request, fig):
     ideal_nadir = content["dimensions_data"]
     preference_point = content["preference"]
     steps_taken = content["steps_taken"]
+    if np.isnan(preference_point.values[0][0]):
+        preference_point = ideal_nadir.loc["nadir"].to_frame(name=0).transpose()
 
     for row, objective_name in enumerate(ideal_nadir.columns):
         for trace in range(7):
             fig["data"][7 * row + trace]["x"] += (steps_taken,)
-        fig["data"][7 * row + 0]["y"] += (bounds[objective_name]["optimistic_lower_bound"],)
-        fig["data"][7 * row + 1]["y"] += (bounds[objective_name]["lower_bound"],)
-        fig["data"][7 * row + 2]["y"] += (bounds[objective_name]["upper_bound"],)
-        fig["data"][7 * row + 3]["y"] += (bounds[objective_name]["optimistic_upper_bound"],)
-        fig["data"][7 * row + 4]["y"] += (preference_point[objective_name],)
+        fig["data"][7 * row + 0]["y"] += (
+            bounds[objective_name]["optimistic_lower_bound"],
+        )
+        fig["data"][7 * row + 1]["y"] += (
+            bounds[objective_name]["optimistic_upper_bound"],
+        )
+        fig["data"][7 * row + 2]["y"] += (bounds[objective_name]["lower_bound"],)
+        fig["data"][7 * row + 3]["y"] += (bounds[objective_name]["upper_bound"],)
+
+        fig["data"][7 * row + 4]["y"] += (preference_point[objective_name][0],)
         fig["data"][7 * row + 5]["y"] += (ideal_nadir[objective_name]["ideal"],)
         fig["data"][7 * row + 6]["y"] += (ideal_nadir[objective_name]["nadir"],)
     return fig

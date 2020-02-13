@@ -4,7 +4,6 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import numpy as np
 
@@ -13,11 +12,17 @@ from UI.app import app
 from desdeo_problem.Problem import DataProblem
 from desdeo_problem.surrogatemodels.SurrogateModels import GaussianProcessRegressor
 from desdeo_problem.surrogatemodels.lipschitzian import LipschitzianRegressor
+from sklearn.gaussian_process.kernels import Matern
 from sklearn.metrics import r2_score
 
 regressors = {
     "Gaussian Process Regressor": GaussianProcessRegressor,
     "Lipschitzian Regressor": LipschitzianRegressor,
+}
+
+regressor_hyperparameters={
+    "Gaussian Process Regressor": {"kernel": Matern(nu=3/2)},
+    "Lipschitzian Regressor": None,
 }
 
 
@@ -85,7 +90,7 @@ def train_all_models(button_clicked, chosen_technique):
     # Get problem from previous page instead of creating one here.
 
     # problem = session["problem"]
-    problem.train(regressor)
+    problem.train(regressor, regressor_hyperparameters[chosen_technique])
     session["problem"] = problem
     """for objective in objective_names:
         model = regressor()

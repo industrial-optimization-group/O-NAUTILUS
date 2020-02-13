@@ -2,18 +2,28 @@ import cma
 from desdeo_problem.Problem import DataProblem
 import numpy as np
 from scipy.stats import norm, uniform
+import pandas as pd
+from desdeo_tools.scalarization import PointMethodASF
 
 
 def preferential_func_eval(
-    problem: DataProblem, reference_point: np.ndarray, distribution: str = "Normal"
+    problem: DataProblem,
+    optimistic_front: pd.DataFrame,
+    ideal: np.ndarray,
+    nadir: np.ndarray,
+    reference_point: np.ndarray,
+    distribution: str = "Normal",
 ):
     """Make sure that the dimensions are normalized such that a single "sigma" value
     is meaningful"""
     lower_bounds = problem.get_variable_lower_bounds()
     upper_bounds = problem.get_variable_upper_bounds()
     # Maybe solve ASF with known data to get better initial solution
-    rand = np.random.random(lower_bounds.shape)
-    initial_solution = (upper_bounds - lower_bounds) * rand + lower_bounds
+    """rand = np.random.random(lower_bounds.shape)
+    initial_solution = (upper_bounds - lower_bounds) * rand + lower_bounds"""
+    initial_solution = asf_func_eval(
+        problem, optimistic_front, ideal, nadir, reference_point
+    )
     # Solution has to be within 3 sigma of the initial_solution
     sigma = max((upper_bounds - lower_bounds) / 2)
     solver = cma.CMAEvolutionStrategy(
@@ -24,6 +34,21 @@ def preferential_func_eval(
     return solver.optimize(
         m_EI, args=(problem, reference_point, distribution), verb_disp=0
     )
+
+
+def asf_func_eval(
+    problem: DataProblem,
+    optimistic_front: pd.DataFrame,
+    ideal: np.ndarray,
+    nadir: np.ndarray,
+    reference_point: np.ndarray,
+):
+    # TODO Support maximization!!!
+    scalarization_func = PointMethodASF(nadir=nadir, ideal=ideal)
+    fitness = optimistic_front[problem.objective_names]
+    chosen_id = scalarization_func(fitness, reference_point).argmin()
+    chosen_solution = optimistic_front[problem.variable_names].values[chosen_id]
+    return chosen_solution
 
 
 def m_EI(x, problem: DataProblem, reference_point: np.ndarray, distribution: str):
@@ -47,6 +72,7 @@ def m_EI(x, problem: DataProblem, reference_point: np.ndarray, distribution: str
                 " use 'Normal' or 'Uniform' distribution"
             )
     return -mEI
+
 
 def _expected_improvement_normal(means, std, y_ref):
     with np.errstate(divide="warn"):

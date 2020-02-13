@@ -11,12 +11,14 @@ from flask import session
 from onautilus.onautilus import ONAUTILUS
 from UI.app import app
 from UI.pages.tools import create_navigator_plot, extend_navigator_plot, createscatter2d
+from onautilus.preferential_func_eval import preferential_func_eval as pfe
 
 
 def layout():
+    objective_names = session["objective_names"]
     return html.Div(
         children=[
-            html.H1(children="NAUTILUS test app"),
+            html.H1(children="O-NAUTILUS app"),
             html.Div(
                 children="""
             Testing out dash plotly
@@ -31,21 +33,23 @@ def layout():
                 id="scatter_graph", style={"width": "49%", "display": "inline-block"}
             ),
             html.Div(
-                [
+                id="aspiration_text_boxes",
+                children=[
                     dcc.Input(
                         id=f"textbox{i+1}",
-                        placeholder=f"Enter a value for X{i+1}",
+                        placeholder=f"Enter a value for {y}",
                         type="number",
-                        disabled=True,
                     )
-                    for i in range(2)
-                ]
+                    for i, y in enumerate(objective_names)
+                ],
+                hidden=False,
             ),
             html.Button("Pause", id="pausebutton"),
             html.Button("Submit", id="submitbutton", disabled=True),
             dcc.Interval(
                 id="step_counter", interval=1 * 1000, n_intervals=0
             ),  # in milliseconds
+            html.Div(id="pausewindow"),
             html.Div(id="callback_blackhole"),
         ]
     )
@@ -65,10 +69,14 @@ def iterate(n, navigator_graph):
         raise PreventUpdate
     # Zeroth iteration
     if n == 0:
-        known_data = session["original_dataset"][session["objective_names"]].values
+        objective_names = session["objective_names"]
+        known_data = session["original_dataset"][objective_names].values
         surrogate_data = session["optimizer"].population.objectives
         method = ONAUTILUS(
-            known_data=known_data, optimistic_data=surrogate_data, num_steps=20
+            known_data=known_data,
+            optimistic_data=surrogate_data,
+            objective_names=objective_names,
+            num_steps=20,
         )
         session["navigator"] = method
         ranges_plot_request, solutions_plot_request, preference_request = (
@@ -97,7 +105,7 @@ def iterate(n, navigator_graph):
                 ranges_plot_request, navigator_graph
             )
             scatter_graph = dcc.Graph(figure=createscatter2d(solutions_plot_request))
-            click_pause = None
+            click_pause = 0
         if navigator_graph is None:
             navigator_graph_new = create_navigator_plot(ranges_plot_request)
         return (navigator_graph_new, scatter_graph, click_pause)
@@ -108,7 +116,8 @@ def iterate(n, navigator_graph):
         Output("step_counter", "disabled"),
         Output("pausebutton", "children"),
         Output("submitbutton", "disabled"),
-        *[Output(f"textbox{i+1}", "disabled") for i in range(2)],
+        Output("aspiration_text_boxes", "hidden"),
+        Output("pausewindow", "children")
         # *[Output(f"textbox{i+1}", "value") for i in range(2)]
     ],
     [Input("pausebutton", "n_clicks")],
@@ -117,23 +126,26 @@ def iterate(n, navigator_graph):
 def pauseevent(pauseclick, pausevalue):
     if pauseclick is None:
         # Prevents pausing when initializing or other non-pausing events
-        return (False, "Pause", True, True, True)
+        return (True, "Play", False, False, pausewindow())
         # return (True, "Play", False, False, False)
     if pausevalue == "Pause":
-        return (True, "Play", False, False, False)
+        if pauseclick == 0:
+            return (False, "Pause", True, True, None)
+        return (True, "Play", False, False, pausewindow())
     elif pausevalue == "Play":
-        return (False, "Pause", True, True, True)
+        return (False, "Pause", True, True, None)
 
 
 @app.callback(
     Output("callback_blackhole", "children"),
     [Input("submitbutton", "n_clicks")],
-    [*[State(f"textbox{i+1}", "value") for i in range(2)]],
+    [State("aspiration_text_boxes", "children")],
 )
-def submitevent(submitclick, *preference_values):
+def submitevent(submitclick, preference_value_div):
     if submitclick is None:
         raise PreventUpdate
     preference_request = session["preference"]
+    preference_values = [element["props"]["value"] for element in preference_value_div]
     pref_value = pd.DataFrame(
         [preference_values],
         columns=preference_request.content["dimensions_data"].columns,
@@ -141,6 +153,77 @@ def submitevent(submitclick, *preference_values):
     preference_request.response = pref_value
     session["preference"] = preference_request
     return None
+
+
+def pausewindow():
+    ranges_request = session["navigator"].request_ranges_plot()
+    reference = ranges_request.content["current_point"].values[0]
+    objective_names = session["objective_names"]
+    return (
+        html.Div(
+            [
+                html.H5(children="Enter a reference point for MEI calculation"),
+                html.Div(
+                    id="mei_text_boxes",
+                    children=[
+                        dcc.Input(
+                            id=f"meibox{i+1}",
+                            placeholder=f"Enter a value for {y}",
+                            type="number",
+                            value=reference[i],
+                        )
+                        for i, y in enumerate(objective_names)
+                    ],
+                ),
+                html.Button(id="functionevaluation", value="Evaluate new point"),
+                html.Div(id="func_eval_results"),
+                dcc.Link("Go back to training page", href="/train#O-NAUTILUS"),
+            ]
+        ),
+    )
+
+
+@app.callback(
+    Output("func_eval_results", "children"),
+    [Input("functionevaluation", "n_clicks")],
+    [State("mei_text_boxes", "children")],
+)
+def function_evaluation(button_press, mei_div):
+    if button_press is None:
+        raise PreventUpdate
+
+    ref_point = np.asarray([element["props"]["value"] for element in mei_div])
+
+    ranges_request = session["navigator"].request_ranges_plot()
+    optimizer = session["optimizer"]
+    true_func_eval = session["true_function"]
+    data = session["original_dataset"]
+
+    individuals = optimizer.population.individuals
+    objectives = optimizer.population.objectives - optimizer.population.uncertainity
+    problem = optimizer.population.problem
+    var_names = problem.get_variable_names()
+    obj_names = problem.get_objective_names()
+    ideal = ranges_request.content["dimensions_data"].loc["ideal"].values
+    nadir = ranges_request.content["dimensions_data"].loc["nadir"].values
+    opt_front = pd.DataFrame(
+        np.hstack((individuals, objectives)), columns=var_names + obj_names
+    )
+    x_new = pfe(
+        problem, opt_front, ideal, nadir, reference_point=ref_point
+    ).result.xbest
+    y_new = true_func_eval(x_new)
+    y_new_predicted = problem.evaluate(x_new, use_surrogate=True)
+
+    x = data[var_names].values
+    y = data[obj_names].values
+    x = np.vstack((x, x_new))
+    y = np.vstack((y, y_new))
+    data = np.hstack((x, y))
+    data = pd.DataFrame(data, columns=var_names + obj_names)
+    session["original_dataset"] = data
+
+    return f"Predicted Results:\n{y_new_predicted}\nEvaluated Results:\n{y_new}"
 
 
 if __name__ == "__main__":

@@ -1,12 +1,15 @@
 from flask_session import Session
 from flask import session
-import random, string
+import random
+import string
 from os import environ
 
 import dash
 
-#external_stylesheets = ['https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.min.css']
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css',]
+# external_stylesheets = [
+# 'https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.min.css'
+# ]
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 

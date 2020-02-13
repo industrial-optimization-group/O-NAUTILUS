@@ -5,13 +5,19 @@ from typing import List
 from desdeo_tools.interaction.request import ReferencePointPreference, SimplePlotRequest
 from random import randint
 
+
 # TODO: Name objectives in the requests
 class ONAUTILUS:
     def __init__(
-        self, known_data: np.ndarray, optimistic_data: np.ndarray, num_steps: int = 10
+        self,
+        known_data: np.ndarray,
+        optimistic_data: np.ndarray,
+        objective_names: List[str],
+        num_steps: int = 10,
     ):
         self.known_data = known_data
         self.optimistic_data = optimistic_data
+        self.objective_names = objective_names
         self.num_steps = num_steps
         # TODO THIS ASSUMES MINIMIZATION. FIX
         self.ideal_known = known_data.min(axis=0)
@@ -116,9 +122,6 @@ class ONAUTILUS:
         )
 
     def request_ranges_plot(self):
-        objective_names = [
-            f"F{i + 1}" for i in range(self.achievable_ranges_known.shape[1])
-        ]
         data = pd.DataFrame(
             np.vstack(
                 (self.achievable_ranges_known, self.achievable_ranges_optimistic)
@@ -129,37 +132,37 @@ class ONAUTILUS:
                 "optimistic_lower_bound",
                 "optimistic_upper_bound",
             ],
-            columns=objective_names,
+            columns=self.objective_names,
         )
         dimensions_data = pd.DataFrame(
             np.vstack((np.ones_like(self.ideal), self.ideal, self.nadir)),
             index=["minimize", "ideal", "nadir"],
-            columns=objective_names,
+            columns=self.objective_names,
         )
         request = SimplePlotRequest(
             data=data, dimensions_data=dimensions_data, message="blah"
         )
         request.content["steps_taken"] = self.steps_taken
         request.content["current_point"] = pd.DataFrame(
-            [self.current_point], columns=objective_names
+            [self.current_point], columns=self.objective_names
         )
         request.content["total_steps"] = self.num_steps
         if self.preference_point is not None:
             request.content["preference"] = pd.DataFrame(
-                [self.preference_point], columns=objective_names
+                [self.preference_point], columns=self.objective_names
             )
         else:
+            # TODO *self.current_point????? Look into other requests as well
             request.content["preference"] = pd.DataFrame(
-                self.preference_point, columns=objective_names, index=[0]
+                [self.current_point], columns=self.objective_names,
             )
         return request
 
     def request_preferences(self):
-        objective_names = [f"F{i + 1}" for i in range(self.achievable_ranges_known.shape[1])]
         data = pd.DataFrame(
-            np.vstack((np.ones_like(self.ideal), self.achievable_ranges_optimistic)),
+            np.vstack((np.ones_like(self.ideal), self.ideal, self.current_point)),
             index=["minimize", "ideal", "nadir"],
-            columns=objective_names,
+            columns=self.objective_names,
         )
         message = (
             "Provide a new reference point between the achievable ideal "
@@ -174,15 +177,14 @@ class ONAUTILUS:
         )
 
     def request_solutions_plot(self):
-        objective_names = [
-            f"F{i + 1}" for i in range(self.achievable_ranges_known.shape[1])
-        ]
-        data = pd.DataFrame(self.non_dominated_known, columns=objective_names)
-        opt_data = pd.DataFrame(self.non_dominated_optimistic, columns=objective_names)
+        data = pd.DataFrame(self.non_dominated_known, columns=self.objective_names)
+        opt_data = pd.DataFrame(
+            self.non_dominated_optimistic, columns=self.objective_names
+        )
         dimensions_data = pd.DataFrame(
             np.vstack((np.ones_like(self.ideal), self.ideal, self.nadir)),
             index=["minimize", "ideal", "nadir"],
-            columns=objective_names,
+            columns=self.objective_names,
         )
         request = SimplePlotRequest(
             data=data, dimensions_data=dimensions_data, message="blah"
@@ -191,15 +193,15 @@ class ONAUTILUS:
         request.content["optimistic_data"] = opt_data
         request.content["achievable_ids_opt"] = self.currently_achievable_optimistic
         request.content["current_point"] = pd.DataFrame(
-            [self.current_point], columns=objective_names
+            [self.current_point], columns=self.objective_names
         )
         if self.preference_point is not None:
             request.content["preference"] = pd.DataFrame(
-                [self.preference_point], columns=objective_names
+                [self.preference_point], columns=self.objective_names
             )
         else:
             request.content["preference"] = pd.DataFrame(
-                self.preference_point, columns=objective_names, index=[0]
+                [self.current_point], columns=self.objective_names
             )
         return request
 

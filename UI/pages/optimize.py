@@ -99,14 +99,14 @@ def optimize(clicked, chosen_algorithm):
         )
     )
     individuals = optimizer.population.individuals
-    ##### TRUE FUNCTION EVALUATIONS; REPLACE THIS
+    # REPLACE THIS
     # TODO
-    y1 = individuals.sum(axis=1)
-    y2 = individuals[:, 0] * individuals[:, 1] - individuals[:, 2]
+    true_func_eval = session["true_function"]
+    y = true_func_eval(individuals)
     figure.add_trace(
         go.Scatter(
-            x=y1,
-            y=y2,
+            x=y[:, 0],
+            y=y[:, 1],
             mode="markers",
             name="Front from surrogates, evaluated with true functions",
         )
