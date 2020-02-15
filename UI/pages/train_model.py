@@ -20,8 +20,8 @@ regressors = {
     "Lipschitzian Regressor": LipschitzianRegressor,
 }
 
-regressor_hyperparameters={
-    "Gaussian Process Regressor": {"kernel": Matern(nu=3/2)},
+regressor_hyperparameters = {
+    "Gaussian Process Regressor": {"kernel": Matern(nu=3 / 2)},
     "Lipschitzian Regressor": None,
 }
 
@@ -83,8 +83,12 @@ def train_all_models(button_clicked, chosen_technique):
     objective_names = session["objective_names"]
     variable_names = session["decision_variable_names"]
     data = session["original_dataset"]
+    bounds = session["bounds"]
     problem = DataProblem(
-        data=data, objective_names=objective_names, variable_names=variable_names
+        data=data,
+        objective_names=objective_names,
+        variable_names=variable_names,
+        bounds=bounds,
     )
     # Use the following what analytical problems are supported.
     # Get problem from previous page instead of creating one here.

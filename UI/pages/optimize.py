@@ -6,6 +6,7 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import pandas as pd
 import plotly
+import numpy as np
 
 from pygmo import fast_non_dominated_sorting as nds
 import plotly.graph_objects as go
@@ -71,7 +72,16 @@ def optimize(clicked, chosen_algorithm):
 
     session["optimizer"] = optimizer
 
-    objectives = optimizer.population.objectives
+    fitness_modifier = {"RVEA": 0, "Optimistic RVEA": -1, "Robust RVEA": 1}
+    individuals = optimizer.population.individuals
+    objectives = (
+        optimizer.population.objectives
+        + fitness_modifier[chosen_algorithm] * optimizer.population.uncertainity
+    )
+    session["optimistic_data"] = pd.DataFrame(
+        np.hstack((individuals, objectives)),
+        columns=problem.variable_names + problem.objective_names,
+    )
     """data = pd.DataFrame(objectives, columns=problem.objective_names)
     fig = ex.parallel_coordinates(data)
     fig_obj = dcc.Graph(figure=fig)"""
@@ -98,7 +108,6 @@ def optimize(clicked, chosen_algorithm):
             name="Front from surrogates",
         )
     )
-    individuals = optimizer.population.individuals
     # REPLACE THIS
     # TODO
     true_func_eval = session["true_function"]

@@ -71,7 +71,7 @@ def iterate(n, navigator_graph):
     if n == 0:
         objective_names = session["objective_names"]
         known_data = session["original_dataset"][objective_names].values
-        surrogate_data = session["optimizer"].population.objectives
+        surrogate_data = session["optimistic_data"][objective_names].values
         method = ONAUTILUS(
             known_data=known_data,
             optimistic_data=surrogate_data,
@@ -199,18 +199,15 @@ def function_evaluation(button_press, mei_div):
     true_func_eval = session["true_function"]
     data = session["original_dataset"]
 
-    individuals = optimizer.population.individuals
-    objectives = optimizer.population.objectives - optimizer.population.uncertainity
+    optimistic_data = session["optimistic_data"]
     problem = optimizer.population.problem
     var_names = problem.get_variable_names()
     obj_names = problem.get_objective_names()
     ideal = ranges_request.content["dimensions_data"].loc["ideal"].values
     nadir = ranges_request.content["dimensions_data"].loc["nadir"].values
-    opt_front = pd.DataFrame(
-        np.hstack((individuals, objectives)), columns=var_names + obj_names
-    )
+    
     x_new = pfe(
-        problem, opt_front, ideal, nadir, reference_point=ref_point
+        problem, optimistic_data, ideal, nadir, reference_point=ref_point
     ).result.xbest
     y_new = true_func_eval(x_new)
     y_new_predicted = problem.evaluate(x_new, use_surrogate=True)

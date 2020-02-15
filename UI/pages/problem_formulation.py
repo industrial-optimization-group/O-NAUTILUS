@@ -6,6 +6,7 @@ from dash.dependencies import Input, Output, State
 from optproblems.zdt import ZDT1, ZDT2, ZDT3
 from dash.exceptions import PreventUpdate
 import numpy as np
+import pandas as pd
 
 from UI.app import app
 
@@ -64,6 +65,21 @@ def layout():
                     ),
                 ],
             ),
+            # Radio button 1: Decision variables
+            html.Label(
+                id="bounds",
+                children=[
+                    "Choose lower and upper bounds:",
+                    dcc.RadioItems(
+                        id="bounds_button",
+                        options=[
+                            {"label": "0-1 for all variables", "value": "0-1"},
+                            {"label": "Min-Max from dataset", "value": "min-max"},
+                        ],
+                        labelStyle={"display": "inline-block"},
+                    ),
+                ],
+            ),
             # Dropdown 2: objective function names
             html.Label(
                 [
@@ -100,6 +116,7 @@ def layout():
                 ]
             ),
             html.Div(id="callback_blackhole_train", hidden=True),
+            html.Div(id="callback_blackhole2_train", hidden=True),
         ]
     )
 
@@ -164,7 +181,35 @@ def add_objectives(objective_names, all_names):
 
 @app.callback(
     Output("callback_blackhole_train", "children"),
-    [Input("test_functions", "value")],
+    [Input("bounds_button", "value")],
+    [State("decision_variables", "value")],
+)
+def bounds(bound_type, decision_variables):
+    if bound_type is None:
+        raise PreventUpdate
+    if decision_variables is None:
+        raise PreventUpdate
+    if bound_type == "0-1":
+        lower_bounds = [0] * len(decision_variables)
+        upper_bounds = [1] * len(decision_variables)
+        bounds = pd.DataFrame(
+            np.vstack((lower_bounds, upper_bounds)),
+            columns=decision_variables,
+            index=["lower_bound", "upper_bound"],
+        )
+    if bound_type == "min-max":
+        bounds = (
+            session["original_dataset"]
+            .describe()[decision_variables]
+            .loc[["min", "max"]]
+        )
+        bounds.rename(index={"min": "lower_bound", "max": "upper_bound"}, inplace=True)
+    session["bounds"] = bounds
+    return
+
+
+@app.callback(
+    Output("callback_blackhole2_train", "children"), [Input("test_functions", "value")]
 )
 def save_test_function(chosen_func):
     if chosen_func is None:
