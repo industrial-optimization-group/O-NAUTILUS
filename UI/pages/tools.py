@@ -161,15 +161,6 @@ def createscatter2d(request):
     non_dom_opt = non_dom_opt[non_dom_opt[:, 1].argsort()]
     achievable_opt = achievable_opt[achievable_opt[:, 1].argsort()]
     figure = go.Figure()
-    figure.update_layout(
-        title={
-            "text": "Test Problem",
-            "y": 0.9,
-            "x": 0.5,
-            "xanchor": "center",
-            #'yanchor': 'top'
-        }
-    )
     figure.add_trace(
         go.Scatter(
             x=non_dom[:, 0],

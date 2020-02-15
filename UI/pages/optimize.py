@@ -17,11 +17,13 @@ from desdeo_emo.EAs.RVEA import RVEA, oRVEA, robust_RVEA
 
 
 optimizers = {"RVEA": RVEA, "Optimistic RVEA": oRVEA, "Robust RVEA": robust_RVEA}
+optimizer_hyperparameters = {"n_iterations": 6, "n_gen_per_iter": 50}
 
 
 def layout():
     return html.Div(
         [
+            html.H1("Optimization", id="header_optimize"),
             html.Label(
                 [
                     "Choose the optimization algorithm",
@@ -66,7 +68,9 @@ def optimize(clicked, chosen_algorithm):
         raise PreventUpdate
     problem = session["problem"]
     original_data_y = session["original_dataset"][problem.objective_names].values
-    optimizer = optimizers[chosen_algorithm](problem, use_surrogates=True)
+    optimizer = optimizers[chosen_algorithm](
+        problem, use_surrogates=True, **optimizer_hyperparameters
+    )
     while optimizer.continue_evolution():
         optimizer.iterate()
 
@@ -120,4 +124,4 @@ def optimize(clicked, chosen_algorithm):
             name="Front from surrogates, evaluated with true functions",
         )
     )
-    return (False, "Hi", dcc.Graph(figure=figure, id="graph"))
+    return (False, "", dcc.Graph(figure=figure, id="graph"))

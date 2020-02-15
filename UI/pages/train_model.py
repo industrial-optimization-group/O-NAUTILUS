@@ -30,6 +30,7 @@ def layout():
     objective_names = session["objective_names"]
     return html.Div(
         [
+            html.H1("Surrogate Modelling", id="header_train_model"),
             html.Label(
                 [
                     "Choose the surrogate modelling technique",
