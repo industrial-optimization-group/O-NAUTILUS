@@ -154,6 +154,7 @@ def createscatter2d(request):
     achievable_opt = non_dom_opt[request.content["achievable_ids_opt"]]
     ideal = request.content["dimensions_data"].loc["ideal"]
     nadir = request.content["dimensions_data"].loc["nadir"]
+    past_points = request.content["current_points_list"].values
     current = request.content["current_point"].values[0]
     preference = request.content["preference"].values[0]
     non_dom = non_dom[non_dom[:, 1].argsort()]
@@ -195,7 +196,15 @@ def createscatter2d(request):
     )
     figure.add_trace(go.Scatter(x=[ideal[0]], y=[ideal[1]], name="Ideal point"))
     figure.add_trace(go.Scatter(x=[nadir[0]], y=[nadir[1]], name="Nadir point"))
-    figure.add_trace(go.Scatter(x=[current[0]], y=[current[1]], name="Current Point"))
+    figure.add_trace(
+        go.Scatter(
+            x=past_points[:, 0],
+            y=past_points[:, 1],
+            name="Past Points",
+            line_color="grey",
+        )
+    )
+    figure.add_trace(go.Scatter(x=[current[0]], y=[current[1]], name="Current point"))
     figure.add_trace(
         go.Scatter(x=[preference[0]], y=[preference[1]], name="Preference")
     )

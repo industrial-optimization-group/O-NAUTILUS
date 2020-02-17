@@ -13,10 +13,16 @@ import plotly.graph_objects as go
 
 from UI.app import app
 
-from desdeo_emo.EAs.RVEA import RVEA, oRVEA, robust_RVEA
+from desdeo_emo.EAs.RVEA import RVEA
+from desdeo_emo.EAs.NSGAIII import NSGAIII
 
 
-optimizers = {"RVEA": RVEA, "Optimistic RVEA": oRVEA, "Robust RVEA": robust_RVEA}
+optimizers = {"RVEA": RVEA, "NSGAIII": NSGAIII}
+selection_type = {
+    "Optimistic": {"selection_type": "optimistic"},
+    "Mean": {"selection_type": "mean"},
+    "Robust": {"selection_type": "robust"},
+}
 optimizer_hyperparameters = {"n_iterations": 6, "n_gen_per_iter": 50}
 
 
@@ -33,7 +39,20 @@ def layout():
                             {"label": optimizer, "value": optimizer}
                             for optimizer in optimizers
                         ],
-                        value="Optimistic RVEA",
+                        value="RVEA",
+                    ),
+                ]
+            ),
+            html.Label(
+                [
+                    "Choose the selection type",
+                    dcc.Dropdown(
+                        id="selection_type",
+                        options=[
+                            {"label": sel_tpye, "value": sel_tpye}
+                            for sel_tpye in selection_type
+                        ],
+                        value="Optimistic",
                     ),
                 ]
             ),
@@ -61,26 +80,29 @@ def layout():
         Output("optimization_graph", "children"),
     ],
     [Input("optimize_button", "n_clicks")],
-    [State("optimization_algorithm", "value")],
+    [State("optimization_algorithm", "value"), State("selection_type", "value")],
 )
-def optimize(clicked, chosen_algorithm):
+def optimize(clicked, chosen_algorithm, chosen_selection_type):
     if clicked is None:
         raise PreventUpdate
     problem = session["problem"]
     original_data_y = session["original_dataset"][problem.objective_names].values
     optimizer = optimizers[chosen_algorithm](
-        problem, use_surrogates=True, **optimizer_hyperparameters
+        problem,
+        use_surrogates=True,
+        **optimizer_hyperparameters,
+        **selection_type[chosen_selection_type]
     )
     while optimizer.continue_evolution():
         optimizer.iterate()
 
     session["optimizer"] = optimizer
 
-    fitness_modifier = {"RVEA": 0, "Optimistic RVEA": -1, "Robust RVEA": 1}
+    fitness_modifier = {"Mean": 0, "Optimistic": -1, "Robust": 1}
     individuals = optimizer.population.individuals
     objectives = (
         optimizer.population.objectives
-        + fitness_modifier[chosen_algorithm] * optimizer.population.uncertainity
+        + fitness_modifier[chosen_selection_type] * optimizer.population.uncertainity
     )
     session["optimistic_data"] = pd.DataFrame(
         np.hstack((individuals, objectives)),

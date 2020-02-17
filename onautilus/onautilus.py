@@ -37,7 +37,7 @@ class ONAUTILUS:
         # self.preference_point = self.ideal
         self.preference_point = None
         self.current_point = self.nadir
-        self.current_points_list = [self.nadir]
+        self.current_points_list = self.nadir.reshape(-1, 1).T
         self.improvement_direction = None
         self.currently_achievable_known: List = range(len(self.non_dominated_known))
         self.achievable_ranges_known = np.vstack((self.ideal_known, self.nadir_known))
@@ -91,7 +91,9 @@ class ONAUTILUS:
         #  Finding achievable ranges
         else:
             self.current_point = current_point
-            self.current_points_list.append(current_point)
+            self.current_points_list = np.vstack(
+                (self.current_points_list, current_point)
+            )
 
             self.currently_achievable_known = achievable_ids_known
             self.currently_achievable_optimistic = achievable_ids_optimistic
@@ -154,7 +156,7 @@ class ONAUTILUS:
         else:
             # TODO *self.current_point????? Look into other requests as well
             request.content["preference"] = pd.DataFrame(
-                [self.current_point], columns=self.objective_names,
+                [self.current_point], columns=self.objective_names
             )
         return request
 
@@ -194,6 +196,9 @@ class ONAUTILUS:
         request.content["achievable_ids_opt"] = self.currently_achievable_optimistic
         request.content["current_point"] = pd.DataFrame(
             [self.current_point], columns=self.objective_names
+        )
+        request.content["current_points_list"] = pd.DataFrame(
+            self.current_points_list, columns=self.objective_names
         )
         if self.preference_point is not None:
             request.content["preference"] = pd.DataFrame(

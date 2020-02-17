@@ -185,9 +185,7 @@ def pausewindow(scatter_graph):
                                 for i, y in enumerate(objective_names)
                             ],
                         ),
-                        html.Button(
-                            id="functionevaluation", value="Evaluate new point"
-                        ),
+                        html.Button("Evaluate new point", id="functionevaluation"),
                         html.Div(
                             id="func_eval_results_div",
                             style={"width": "49%", "display": "inline-block"},

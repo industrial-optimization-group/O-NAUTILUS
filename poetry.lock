@@ -206,10 +206,10 @@ description = "The python version reference vector guided evolutionary algorithm
 name = "desdeo-emo"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.6.0"
+version = "0.7.0"
 
 [package.dependencies]
-desdeo-problem = ">=0.10.0,<0.11.0"
+desdeo-problem = ">=0.11.0,<0.12.0"
 desdeo-tools = ">=0.2.0,<0.3.0"
 diversipy = ">=0.8.0,<0.9.0"
 numpy = ">=1.16,<2.0"
@@ -227,7 +227,7 @@ description = "This package contains the problem classes for desdeo framework."
 name = "desdeo-problem"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.10.0"
+version = "0.11.0"
 
 [package.dependencies]
 diversipy = ">=0.8.0,<0.9.0"
@@ -1127,7 +1127,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools"]
 
 [metadata]
-content-hash = "ba96547da5b9bc4fee691ccb4c22255969739c97a8cb53b89a6a205b52a5cca4"
+content-hash = "f2a8e72ac17dffa5c7abdaf3afd2d05800b3c25b12656a8c8a93bb22da5e7752"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1203,12 +1203,12 @@ defusedxml = [
     {file = "defusedxml-0.6.0.tar.gz", hash = "sha256:f684034d135af4c6cbb949b8a4d2ed61634515257a67299e5f940fbaa34377f5"},
 ]
 desdeo-emo = [
-    {file = "desdeo_emo-0.6.0-py3-none-any.whl", hash = "sha256:83ebf313c8061edf7f212d1b700230e914444c7769296b85646191925ff42f9b"},
-    {file = "desdeo_emo-0.6.0.tar.gz", hash = "sha256:6658e9e0501dec69adad1d512d0e3b5a804fd5eb644b845e1c6e5ad89cdc31a1"},
+    {file = "desdeo_emo-0.7.0-py3-none-any.whl", hash = "sha256:64308a1c6f470636b728c5b7524c28d7dd8de6442876407bc0a9de0806d058ea"},
+    {file = "desdeo_emo-0.7.0.tar.gz", hash = "sha256:2ba8251d2948b65182a2c95907acd1570cab4a1736bcfd4836e900de72a85a9a"},
 ]
 desdeo-problem = [
-    {file = "desdeo_problem-0.10.0-py3-none-any.whl", hash = "sha256:82f831a4eb9f3126abe015f8909207e10c78710044fd187036cb67d9ca6530da"},
-    {file = "desdeo_problem-0.10.0.tar.gz", hash = "sha256:b245d4c392d04e8701b70fd2ff66720e995c3a4d61649a79a48288cb1a7a30ec"},
+    {file = "desdeo_problem-0.11.0-py3-none-any.whl", hash = "sha256:0ac33096b9860edd537d4a7840a5ace39b07eac99a2e1e10d598b408a04ade39"},
+    {file = "desdeo_problem-0.11.0.tar.gz", hash = "sha256:35e5d49f92662d26f5bc170156a360f75978551192a78bd9c9c391ef24c9a6b8"},
 ]
 desdeo-tools = [
     {file = "desdeo-tools-0.2.0.tar.gz", hash = "sha256:5680164cd914349d2efdb1ab3df52d1df112b3e742768abec4f51c928e021112"},
