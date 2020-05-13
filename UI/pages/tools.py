@@ -127,7 +127,7 @@ def extend_navigator_plot(request, fig):
     preference_point = content["preference"]
     steps_taken = content["steps_taken"]
     if np.isnan(preference_point.values[0][0]):
-        preference_point = ideal_nadir.loc["nadir"].to_frame(name=0).transpose()
+        preference_point = ideal_nadir.loc["ideal"].to_frame(name=0).transpose()
 
     for row, objective_name in enumerate(ideal_nadir.columns):
         for trace in range(7):

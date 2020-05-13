@@ -5,11 +5,11 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import pandas as pd
-import plotly
 import numpy as np
 
 from pygmo import fast_non_dominated_sorting as nds
 import plotly.graph_objects as go
+import plotly.express as ex
 
 from UI.app import app
 
@@ -104,46 +104,33 @@ def optimize(clicked, chosen_algorithm, chosen_selection_type):
         optimizer.population.objectives
         + fitness_modifier[chosen_selection_type] * optimizer.population.uncertainity
     )
-    session["optimistic_data"] = pd.DataFrame(
+    fitness = (
+        optimizer.population.fitness
+        + fitness_modifier[chosen_selection_type] * optimizer.population.uncertainity
+    )
+    non_dom_indices = nds(fitness)[0][0]
+    individuals = individuals[non_dom_indices]
+    objectives = objectives[non_dom_indices]
+    optimistic_data = pd.DataFrame(
         np.hstack((individuals, objectives)),
         columns=problem.variable_names + problem.objective_names,
     )
-    """data = pd.DataFrame(objectives, columns=problem.objective_names)
-    fig = ex.parallel_coordinates(data)
-    fig_obj = dcc.Graph(figure=fig)"""
-    figure = go.Figure()
-    figure.update_layout(
-        title="Non-dominated fronts",
-        xaxis_title=problem.objective_names[0],
-        yaxis_title=problem.objective_names[1],
-    )
-    known_front = original_data_y[nds(original_data_y)[0][0]]
-    figure.add_trace(
-        go.Scatter(
-            x=known_front[:, 0],
-            y=known_front[:, 1],
-            mode="markers",
-            name="Front from known data",
-        )
-    )
-    figure.add_trace(
-        go.Scatter(
-            x=objectives[:, 0],
-            y=objectives[:, 1],
-            mode="markers",
-            name="Front from surrogates",
-        )
-    )
-    # REPLACE THIS
-    # TODO
+    session["optimistic_data"] = optimistic_data
+    # plotting
     true_func_eval = session["true_function"]
-    y = true_func_eval(individuals)
-    figure.add_trace(
-        go.Scatter(
-            x=y[:, 0],
-            y=y[:, 1],
-            mode="markers",
-            name="Front from surrogates, evaluated with true functions",
-        )
+    known_front = pd.DataFrame(
+        original_data_y[nds(original_data_y * problem._max_multiplier)[0][0]],
+        columns=problem.objective_names,
     )
+    optimistic_front = optimistic_data[problem.objective_names]
+    optimistic_front_evaluated = pd.DataFrame(
+        true_func_eval(individuals), columns=problem.objective_names
+    )
+    known_front["Source"] = "Known data"
+    optimistic_front["Source"] = "Optimistic front"
+    optimistic_front_evaluated["Source"] = "Optimistic front after evaluation"
+    data = known_front.append(optimistic_front, ignore_index=True).append(
+        optimistic_front_evaluated, ignore_index=True
+    )
+    figure = ex.scatter_matrix(data, dimensions=problem.objective_names, color="Source")
     return (False, "", dcc.Graph(figure=figure, id="graph"))

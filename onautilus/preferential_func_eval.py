@@ -6,6 +6,7 @@ import pandas as pd
 from desdeo_tools.scalarization import PointMethodASF
 
 
+
 def preferential_func_eval(
     problem: DataProblem,
     optimistic_front: pd.DataFrame,
@@ -13,6 +14,7 @@ def preferential_func_eval(
     nadir: np.ndarray,
     reference_point: np.ndarray,
     distribution: str = "Normal",
+    strategy: str = "ASF",
 ):
     """Make sure that the dimensions are normalized such that a single "sigma" value
     is meaningful"""
@@ -21,7 +23,7 @@ def preferential_func_eval(
     # Maybe solve ASF with known data to get better initial solution
     """rand = np.random.random(lower_bounds.shape)
     initial_solution = (upper_bounds - lower_bounds) * rand + lower_bounds"""
-    initial_solution = asf_func_eval(
+    initial_solution, scalarization_func = asf_func_eval(
         problem, optimistic_front, ideal, nadir, reference_point
     )
     # Solution has to be within 3 sigma of the initial_solution
@@ -31,9 +33,17 @@ def preferential_func_eval(
         sigma0=sigma,
         inopts={"bounds": [lower_bounds, upper_bounds]},
     )
-    return solver.optimize(
-        m_EI, args=(problem, reference_point, distribution), verb_disp=0
-    )
+    if strategy == "mEI":
+        return solver.optimize(
+            m_EI, args=(problem, reference_point, distribution), verb_disp=0
+        )
+    else:
+        return solver.optimize(
+            mean_ASF,
+            args=(problem, scalarization_func, reference_point, distribution),
+            verb_disp=0,
+            maxfun=10000,
+        )
 
 
 def asf_func_eval(
@@ -45,10 +55,10 @@ def asf_func_eval(
 ):
     # TODO Support maximization!!!
     scalarization_func = PointMethodASF(nadir=nadir, ideal=ideal)
-    fitness = optimistic_front[problem.objective_names]
+    fitness = optimistic_front[problem.objective_names] * problem._max_multiplier
     chosen_id = scalarization_func(fitness, reference_point).argmin()
     chosen_solution = optimistic_front[problem.variable_names].values[chosen_id]
-    return chosen_solution
+    return chosen_solution, scalarization_func
 
 
 def m_EI(x, problem: DataProblem, reference_point: np.ndarray, distribution: str):
@@ -91,3 +101,21 @@ def _expected_improvement_uniform(means, std, y_ref):
         ei = imp * uniform.cdf(Z) + sigma * uniform.pdf(Z)
         # ei[sigma == 0.0] = 0.0
     return ei
+
+
+def mean_ASF(
+    x, problem, scalarization_func: PointMethodASF, reference_point, distribution: str
+):
+    results = problem.evaluate(x, use_surrogate=True)
+    means = results.fitness
+    std = results.uncertainity
+    num_samples = 100
+    if distribution == "Normal":
+        random_samples = norm.rvs(
+            loc=means[0], scale=std[0], size=(num_samples, means.shape[1])
+        )
+    elif distribution == "Uniform":
+        random_samples = uniform.rvs(
+            loc=means[0], scale=std[0], size=(num_samples, means.shape[1])
+        )
+    return scalarization_func(random_samples, reference_point=reference_point).mean()

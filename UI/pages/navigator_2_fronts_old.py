@@ -4,7 +4,6 @@ import dash_html_components as html
 import numpy as np
 import pandas as pd
 import plotly.express as ex
-import plotly.graph_objects as go
 
 from dash.dependencies import Input, Output, State
 from flask import session
@@ -12,7 +11,7 @@ from flask import session
 
 from onautilus.onautilus import ONAUTILUS
 from UI.app import app
-from UI.pages.tools import create_navigator_plot, extend_navigator_plot
+from UI.pages.tools import create_navigator_plot, extend_navigator_plot, createscatter2d
 from onautilus.preferential_func_eval import preferential_func_eval as pfe
 
 
@@ -89,37 +88,36 @@ def iterate(n, navigator_graph):
             num_steps=20,
         )
         session["navigator"] = method
-        ranges_plot_request, scatter_data, preference_request = method.requests()
+        ranges_plot_request, solutions_plot_request, preference_request = (
+            method.requests()
+        )
+        if "preference" in session.keys():
+            print(session["preference"])
+            preference_request.response = session["preference"].response
         session["preference"] = preference_request
         navigator_graph_new = create_navigator_plot(ranges_plot_request)
         # scatter_graph = createscatter2d(solutions_plot_request)
-        scatter_graph = ex.scatter_matrix(
-            scatter_data, dimensions=session["objective_names"], color="Source"
-        )
+        scatter_graph = []
         return (navigator_graph_new, scatter_graph, 1)
     # Other cases
     else:
         method = session["navigator"]
         preference_request = session["preference"]
-        ranges_plot_request, scatter_data, preference_request = method.iterate(
+        ranges_plot_request, solutions_plot_request, preference_request = method.iterate(
             preference_request
         )
         session["preference"] = preference_request
         if preference_request.interaction_priority == "required":
             navigator_graph_new = navigator_graph
             # scatter_graph = createscatter2d(solutions_plot_request)
-            scatter_graph = ex.scatter_matrix(
-                scatter_data, dimensions=session["objective_names"], color="Source"
-            )
+            scatter_graph = []
             click_pause = 1
         else:
             navigator_graph_new = extend_navigator_plot(
                 ranges_plot_request, navigator_graph
             )
             # scatter_graph = createscatter2d(solutions_plot_request)
-            scatter_graph = ex.scatter_matrix(
-                scatter_data, dimensions=session["objective_names"], color="Source"
-            )
+            scatter_graph = None
             click_pause = 0
         if navigator_graph is None:
             navigator_graph_new = create_navigator_plot(ranges_plot_request)
@@ -165,7 +163,6 @@ def submitevent(submitclick, preference_value_div):
         [preference_values],
         columns=preference_request.content["dimensions_data"].columns,
     )
-    session["pref_value"] = pref_value
     preference_request.response = pref_value
     session["preference"] = preference_request
     return None
@@ -226,40 +223,25 @@ def function_evaluation(
         raise PreventUpdate
     if updated_scatter_graph is not None:
         scatter_graph = updated_scatter_graph
+    ref_point = np.asarray([element["props"]["value"] for element in mei_div])
 
     ranges_request = session["navigator"].request_ranges_plot()
     optimizer = session["optimizer"]
     true_func_eval = session["true_function"]
     data = session["original_dataset"]
+
     optimistic_data = session["optimistic_data"]
     problem = optimizer.population.problem
-    ref_point = (
-        np.asarray([element["props"]["value"] for element in mei_div])
-        * problem._max_multiplier
-    )
     var_names = problem.get_variable_names()
     obj_names = problem.get_objective_names()
-    ideal_current = (
-        ranges_request.content["dimensions_data"].loc["ideal"].values
-        * problem._max_multiplier
-    )
-    nadir_current = (
-        ranges_request.content["dimensions_data"].loc["nadir"].values
-        * problem._max_multiplier
-    )
+    ideal = ranges_request.content["dimensions_data"].loc["ideal"].values
+    nadir = ranges_request.content["dimensions_data"].loc["nadir"].values
 
-    x_new = np.atleast_2d(
-        pfe(
-            problem,
-            optimistic_data,
-            ideal_current,
-            nadir_current,
-            reference_point=ref_point,
-        ).result.xbest
-    )
+    x_new = pfe(
+        problem, optimistic_data, ideal, nadir, reference_point=ref_point
+    ).result.xbest
     y_new = true_func_eval(x_new)
-
-    y_new_predicted = problem.evaluate(x_new, use_surrogate=True).objectives
+    y_new_predicted = problem.evaluate(x_new, use_surrogate=True)
 
     x = data[var_names].values
     y = data[obj_names].values
@@ -268,29 +250,22 @@ def function_evaluation(
     data = np.hstack((x, y))
     data = pd.DataFrame(data, columns=var_names + obj_names)
     session["original_dataset"] = data
-    ref_point = ref_point * problem._max_multiplier
-    ref_point_fig = go.Splom(
-        name="Reference Point",
-        dimensions=[
-            dict(label=obj, values=[ref_point[i]]) for i, obj in enumerate(obj_names)
-        ],
-    )
-    before_pred_fig = go.Splom(
-        name="Prediction",
-        dimensions=[
-            dict(label=obj, values=y_new_predicted[:, i])
-            for i, obj in enumerate(obj_names)
-        ],
-    )
-    after_pred_fig = go.Splom(
-        name="After evaluation",
-        dimensions=[
-            dict(label=obj, values=y_new[:, i]) for i, obj in enumerate(obj_names)
-        ],
-    )
-    return go.Figure(
-        scatter_graph["data"] + [ref_point_fig, before_pred_fig, after_pred_fig]
-    )
+    """print(scatter_graph)
+    scatter_graph["data"] += [
+        dict(
+            x=y_new_predicted.objectives[:, 0],
+            y=y_new_predicted.objectives[:, 1],
+            error_x=dict(
+                type="data", array=y_new_predicted.uncertainity[:, 0], visible=True
+            ),
+            error_y=dict(
+                type="data", array=y_new_predicted.uncertainity[:, 1], visible=True
+            ),
+            name="Predicted result",
+        )
+    ]
+    scatter_graph["data"] += [dict(x=[y_new[0]], y=[y_new[1]], name="Evaluated Result")]"""
+    return scatter_graph
 
 
 if __name__ == "__main__":

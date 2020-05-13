@@ -38,7 +38,27 @@ def zdt3func(x):
         return evaluate(x)
 
 
-test_problems = {"ZDT1": zdt1func, "ZDT2": zdt2func, "ZDT3": zdt3func}
+def riverfunc(x):
+    obj1 = 4.07 + 2.27 * x[:, 0]
+    obj2 = (
+        2.60
+        + 0.03 * x[:, 0]
+        + 0.02 * x[:, 1]
+        + 0.01 / (1.39 - x[:, 0] ** 2)
+        + 0.30 / (1.39 - x[:, 1] ** 2)
+    )
+    obj3 = 8.21 - 0.71 / (1.09 - x[:, 0] ** 2)
+    obj4 = -0.96 + 0.96 / (1.09 - x[:, 1] ** 2)
+    obj5 = np.max([np.abs(x[:, 0] - 0.65), np.abs(x[:, 1] - 0.65)], axis=0)
+    return np.vstack((obj1, obj2, obj3, obj4, obj5)).T
+
+
+test_problems = {
+    "ZDT1": zdt1func,
+    "ZDT2": zdt2func,
+    "ZDT3": zdt3func,
+    "River pollution problem": riverfunc,
+}
 
 
 def layout():
@@ -96,12 +116,30 @@ def layout():
                     ),
                 ]
             ),
+            # Textbox: Provide analytical functions
             html.Label(
                 [
                     "Provide analytical functions",
                     html.Div(id="analytical_function_inputs", children=[]),
                 ]
             ),
+            # Dropdown: maximize
+            html.Label(
+                [
+                    "Choose objectives to be maximized",
+                    dcc.Dropdown(
+                        id="objectives_max_info",
+                        options=[
+                            {"label": name, "value": name, "disabled": False}
+                            for name in names
+                        ],
+                        value=[name for name in names if "y" in name or "f" in name],
+                        placeholder="Choose objectives to be maximized",
+                        multi=True,
+                    ),
+                ]
+            ),
+            # Dropdown: choose a test function
             html.Label(
                 [
                     "Choose test functions:",
@@ -115,6 +153,7 @@ def layout():
                     ),
                 ]
             ),
+            html.Label(["Problem Information:", html.Div(id="prob_info", children=[])]),
             html.Div(id="callback_blackhole_train", hidden=True),
             html.Div(id="callback_blackhole2_train", hidden=True),
         ]
@@ -145,6 +184,7 @@ def add_decision_vars(decision_variable_names, all_names):
     [
         Output("decision_variables", "options"),
         Output("analytical_function_inputs", "children"),
+        Output("objectives_max_info", "options"),
     ],
     [Input("objectives", "value")],
     [State("column_names", "children")],
@@ -161,7 +201,13 @@ def add_objectives(objective_names, all_names):
         }
         for name in all_names
     ]
-
+    max_info_options = [
+        {
+            "label": name,
+            "value": name,
+        }
+        for name in objective_names
+    ]
     analytical_function_inputs = [
         html.Label(
             [
@@ -175,8 +221,11 @@ def add_objectives(objective_names, all_names):
         )
         for objective in objective_names
     ]
-
-    return (decision_variable_names_restricted_options, analytical_function_inputs)
+    return (
+        decision_variable_names_restricted_options,
+        analytical_function_inputs,
+        max_info_options,
+    )
 
 
 @app.callback(
@@ -216,3 +265,26 @@ def save_test_function(chosen_func):
         raise PreventUpdate
     session["true_function"] = test_problems[chosen_func]
     return
+
+
+@app.callback(
+    Output("prob_info", "children"),
+    [Input("objectives_max_info", "value")],
+    [
+        State("test_functions", "value"),
+        State("decision_variables", "value"),
+        State("objectives", "value"),
+    ],
+)
+def maximization_info(max_obj, prob_name, var_name, obj_name):
+    max_data = pd.DataFrame(columns=obj_name, index=[0])
+    max_data[:] = False
+    max_data[max_obj] = True
+    session["maximization_info"] = max_data
+    prob_info = (
+        f"Problem name is {prob_name}.\n"
+        f"Decision variables are {var_name}.\n"
+        f"Objective variables are {obj_name}.\n"
+        f"Objectives to be maximized are {max_obj}."
+    )
+    return prob_info

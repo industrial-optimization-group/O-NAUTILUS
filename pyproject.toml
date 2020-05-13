@@ -6,13 +6,13 @@ authors = ["Bhupinder Singh Saini"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "=3.7"
 dash = "^1.7"
 Flask-Session = "^0.3.1"
 pylibmc = "^1.6"
 dash-bootstrap-components = "^0.8.2"
 cma = "^2.7.0"
-desdeo-emo = "^0.7"
+desdeo-emo = "^0.11"
 flask_sessions = "^0.1.5"
 werkzeug = "0.16"
 

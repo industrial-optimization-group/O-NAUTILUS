@@ -4,6 +4,7 @@ from pygmo import fast_non_dominated_sorting as nds
 from typing import List
 from desdeo_tools.interaction.request import ReferencePointPreference, SimplePlotRequest
 from random import randint
+from desdeo_tools.scalarization.ASF import PointMethodASF as asf
 
 
 # TODO: Name objectives in the requests
@@ -14,18 +15,22 @@ class ONAUTILUS:
         optimistic_data: np.ndarray,
         objective_names: List[str],
         num_steps: int = 10,
+        max_multiplier: [List] = None,
     ):
-        self.known_data = known_data
-        self.optimistic_data = optimistic_data
+        self.known_data = known_data * max_multiplier
+        self.optimistic_data = optimistic_data * max_multiplier
         self.objective_names = objective_names
         self.num_steps = num_steps
+        self.max_multiplier = max_multiplier
         # TODO THIS ASSUMES MINIMIZATION. FIX
-        self.ideal_known = known_data.min(axis=0)
-        self.non_dominated_known = known_data[nds(known_data)[0][0]]
+        self.ideal_known = self.known_data.min(axis=0)
+        self.non_dominated_known = self.known_data[nds(self.known_data)[0][0]]
         self.nadir_known = self.non_dominated_known.max(axis=0)
 
-        self.ideal_optimistic = optimistic_data.min(axis=0)
-        self.non_dominated_optimistic = optimistic_data[nds(optimistic_data)[0][0]]
+        self.ideal_optimistic = self.optimistic_data.min(axis=0)
+        self.non_dominated_optimistic = self.optimistic_data[
+            nds(self.optimistic_data)[0][0]
+        ]
         self.nadir_optimistic = self.non_dominated_optimistic.max(axis=0)
 
         self.ideal = np.min((self.ideal_known, self.ideal_optimistic), axis=0)
@@ -62,7 +67,7 @@ class ONAUTILUS:
                 return self.requests()
 
         if preference.response is not None:
-            self.preference_point = preference.response.values[0]
+            self.preference_point = preference.response.values[0] * self.max_multiplier
             self.improvement_direction = self.preference_point - self.current_point
             self.improvement_direction = self.improvement_direction / np.linalg.norm(
                 self.improvement_direction
@@ -70,7 +75,6 @@ class ONAUTILUS:
             self.interaction_priority: str = "not_required"
 
         #  Actual step calculation
-        print(self.preference_point)
         cos_theta = np.dot(self.improvement_direction, self.step_size) / (
             np.linalg.norm(self.step_size)
         )
@@ -119,7 +123,7 @@ class ONAUTILUS:
     def requests(self):
         return (
             self.request_ranges_plot(),
-            self.request_solutions_plot(),
+            self.request_long_data(),
             self.request_preferences(),
         )
 
@@ -136,11 +140,13 @@ class ONAUTILUS:
             ],
             columns=self.objective_names,
         )
+        data = data * self.max_multiplier
         dimensions_data = pd.DataFrame(
-            np.vstack((np.ones_like(self.ideal), self.ideal, self.nadir)),
-            index=["minimize", "ideal", "nadir"],
-            columns=self.objective_names,
+            index=["minimize", "ideal", "nadir"], columns=self.objective_names
         )
+        dimensions_data.loc["minimize"] = self.max_multiplier
+        dimensions_data.loc["ideal"] = self.ideal * self.max_multiplier
+        dimensions_data.loc["nadir"] = self.nadir * self.max_multiplier
         request = SimplePlotRequest(
             data=data, dimensions_data=dimensions_data, message="blah"
         )
@@ -156,60 +162,182 @@ class ONAUTILUS:
         else:
             # TODO *self.current_point????? Look into other requests as well
             request.content["preference"] = pd.DataFrame(
-                [self.current_point], columns=self.objective_names
+                [self.current_point * self.max_multiplier], columns=self.objective_names
             )
         return request
 
     def request_preferences(self):
-        data = pd.DataFrame(
-            np.vstack((np.ones_like(self.ideal), self.ideal, self.current_point)),
-            index=["minimize", "ideal", "nadir"],
-            columns=self.objective_names,
+        dimensions_data = pd.DataFrame(
+            index=["minimize", "ideal", "nadir"], columns=self.objective_names
         )
+        dimensions_data.loc["minimize"] = self.max_multiplier
+        dimensions_data.loc["ideal"] = self.ideal * self.max_multiplier
+        dimensions_data.loc["nadir"] = self.current_point * self.max_multiplier
         message = (
             "Provide a new reference point between the achievable ideal "
-            "and current nadir point"
+            "and current iteration point"
         )
         self.request_id = randint(1e20, 1e21 - 1)
         return ReferencePointPreference(
-            dimensions_data=data,
+            dimensions_data=dimensions_data,
             message=message,
             interaction_priority=self.interaction_priority,
             request_id=self.request_id,
         )
 
     def request_solutions_plot(self):
-        data = pd.DataFrame(self.non_dominated_known, columns=self.objective_names)
-        opt_data = pd.DataFrame(
-            self.non_dominated_optimistic, columns=self.objective_names
+        data = (
+            pd.DataFrame(self.non_dominated_known, columns=self.objective_names)
+            * self.max_multiplier
         )
+        opt_data = (
+            pd.DataFrame(self.non_dominated_optimistic, columns=self.objective_names)
+            * self.max_multiplier
+        )
+
         dimensions_data = pd.DataFrame(
-            np.vstack((np.ones_like(self.ideal), self.ideal, self.nadir)),
-            index=["minimize", "ideal", "nadir"],
-            columns=self.objective_names,
+            index=["minimize", "ideal", "nadir"], columns=self.objective_names
         )
+        dimensions_data.loc["minimize"] = self.max_multiplier
+        dimensions_data.loc["ideal"] = self.ideal * self.max_multiplier
+        dimensions_data.loc["nadir"] = self.nadir * self.max_multiplier
+
         request = SimplePlotRequest(
             data=data, dimensions_data=dimensions_data, message="blah"
         )
+
         request.content["achievable_ids"] = self.currently_achievable_known
         request.content["optimistic_data"] = opt_data
         request.content["achievable_ids_opt"] = self.currently_achievable_optimistic
         request.content["current_point"] = pd.DataFrame(
-            [self.current_point], columns=self.objective_names
+            [self.current_point * self.max_multiplier], columns=self.objective_names
         )
         request.content["current_points_list"] = pd.DataFrame(
             self.current_points_list, columns=self.objective_names
         )
         if self.preference_point is not None:
             request.content["preference"] = pd.DataFrame(
-                [self.preference_point], columns=self.objective_names
+                [self.preference_point * self.max_multiplier],
+                columns=self.objective_names,
             )
         else:
             request.content["preference"] = pd.DataFrame(
-                [self.current_point], columns=self.objective_names
+                [self.ideal * self.max_multiplier], columns=self.objective_names
             )
         return request
 
     def continue_optimization(self) -> bool:
         # TODO chech if the following is correct (+- 1)
         return self.steps_taken < self.num_steps
+
+    def request_long_data(self):
+        data = (
+            pd.DataFrame(
+                self.non_dominated_known[self.currently_achievable_known],
+                columns=self.objective_names,
+            )
+            * self.max_multiplier
+        )
+        opt_data = (
+            pd.DataFrame(
+                self.non_dominated_optimistic[self.currently_achievable_optimistic],
+                columns=self.objective_names,
+            )
+            * self.max_multiplier
+        )
+        ideal = pd.DataFrame(
+            [self.ideal * self.max_multiplier], columns=self.objective_names
+        )
+        nadir = pd.DataFrame(
+            [self.nadir * self.max_multiplier], columns=self.objective_names
+        )
+        if self.preference_point is None:
+            preference = self.ideal
+        else:
+            preference = self.preference_point
+        preference = pd.DataFrame(
+            [preference * self.max_multiplier], columns=self.objective_names
+        )
+        current = pd.DataFrame(
+            [self.current_point * self.max_multiplier], columns=self.objective_names
+        )
+
+        for df, source in (
+            (data, "Known front"),
+            (opt_data, "Optimistic front"),
+            (ideal, "Ideal point"),
+            (nadir, "Nadir point"),
+            (preference, "Preference point"),
+            (current, "Current point"),
+        ):
+            df["Source"] = source
+        return pd.concat([data, opt_data, ideal, nadir, preference, current])
+
+
+class ONAUTILUS2:
+    def __init__(
+        self,
+        data_known: np.ndarray,
+        data_optimistic: np.ndarray,
+        objective_names: List[str],
+        minimize: List[bool] = None,
+    ):
+        """The O-NAUTILUS algorithm
+
+        Parameters
+        ----------
+        data_known : np.ndarray
+            All Data HAS to be non-dominated
+        data_optimistic : np.ndarray
+            All Data HAS to be non-dominated
+        objective_names : List[str]
+            List of objective names in the order they appear in the previous two arrays.
+        minimize : List[bool], optional
+            [description], by default None
+
+        Raises
+        ------
+        NotImplementedError
+            [description]
+        """
+        self._data_known = data_known
+        self._data_optimistic = data_optimistic
+        self._objective_names = objective_names
+
+        self._fitness_known = None
+        self._fitness_optimistic = None
+        self._ideal_fitness_known = None
+        self._nadir_fitness_known = None
+        self._ideal_fitness_optimistic = None
+        self._nadir_fitness_optimistic = None
+        self._ideal_fitness = None
+        self._nadir_fitness = None
+
+        self._known_scalarized_value = None
+        self._optimistic_scalarised_value = None
+
+        self.source_points: List = None
+        self.destination_points: List = None
+
+        if minimize is None:
+            self._minimize = np.ones_like(self._objective_names)
+        else:
+            raise NotImplementedError()
+        self.calculate_fitness()
+
+    def calculate_fitness(self):
+        self._fitness_known = self._data_known * self._minimize
+        self._fitness_optimistic = self._data_optimistic * self._minimize
+
+        self._ideal_fitness_known = self._fitness_known.min(axis=0)
+        self._nadir_fitness_known = self._fitness_known.max(axis=0)
+
+        self._ideal_fitness_optimistic = self._fitness_optimistic.min(axis=0)
+        self._nadir_fitness_optimistic = self._fitness_optimistic.max(axis=0)
+
+        self.ideal = np.min(
+            (self._ideal_fitness_known, self._ideal_fitness_optimistic), axis=0
+        )
+        self.nadir = np.max(
+            (self._nadir_fitness_known, self._nadir_fitness_optimistic), axis=0
+        )

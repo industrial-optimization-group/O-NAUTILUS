@@ -85,11 +85,13 @@ def train_all_models(button_clicked, chosen_technique):
     variable_names = session["decision_variable_names"]
     data = session["original_dataset"]
     bounds = session["bounds"]
+    maximize = session["maximization_info"]
     problem = DataProblem(
         data=data,
         objective_names=objective_names,
         variable_names=variable_names,
         bounds=bounds,
+        maximize=maximize
     )
     # Use the following what analytical problems are supported.
     # Get problem from previous page instead of creating one here.
