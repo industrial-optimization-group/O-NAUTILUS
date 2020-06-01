@@ -14,7 +14,7 @@ def create_navigator_plot(request):
         shared_xaxes=True,
         subplot_titles=list(ideal_nadir.columns),
     )
-    fig.update_xaxes(title_text="Steps", row=2, col=1)
+    fig.update_xaxes(title_text="Steps", row=ideal_nadir.shape[1], col=1)
     fig.update_xaxes(range=[0, total_steps])
     for i in range(ideal_nadir.shape[1]):  # Looping over subplots/rows/objectives
         legend = True if i == 0 else False

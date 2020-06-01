@@ -3,7 +3,14 @@ from flask import session
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
-from optproblems.zdt import ZDT1, ZDT2, ZDT3
+from onautilus.problems import (
+    zdt1func,
+    zdt2func,
+    zdt3func,
+    riverfunc,
+    vehicle_crash_worthiness,
+    rocket_injector,
+)
 from dash.exceptions import PreventUpdate
 import numpy as np
 import pandas as pd
@@ -11,53 +18,13 @@ import pandas as pd
 from UI.app import app
 
 
-def zdt1func(x):
-    x = np.asarray(x)
-    evaluate = ZDT1()
-    if x.ndim == 2:
-        return np.asarray([evaluate(xi) for xi in x])
-    elif x.ndim == 1:
-        return evaluate(x)
-
-
-def zdt2func(x):
-    x = np.asarray(x)
-    evaluate = ZDT2()
-    if x.ndim == 2:
-        return np.asarray([evaluate(xi) for xi in x])
-    elif x.ndim == 1:
-        return evaluate(x)
-
-
-def zdt3func(x):
-    x = np.asarray(x)
-    evaluate = ZDT3()
-    if x.ndim == 2:
-        return np.asarray([evaluate(xi) for xi in x])
-    elif x.ndim == 1:
-        return evaluate(x)
-
-
-def riverfunc(x):
-    obj1 = 4.07 + 2.27 * x[:, 0]
-    obj2 = (
-        2.60
-        + 0.03 * x[:, 0]
-        + 0.02 * x[:, 1]
-        + 0.01 / (1.39 - x[:, 0] ** 2)
-        + 0.30 / (1.39 - x[:, 1] ** 2)
-    )
-    obj3 = 8.21 - 0.71 / (1.09 - x[:, 0] ** 2)
-    obj4 = -0.96 + 0.96 / (1.09 - x[:, 1] ** 2)
-    obj5 = np.max([np.abs(x[:, 0] - 0.65), np.abs(x[:, 1] - 0.65)], axis=0)
-    return np.vstack((obj1, obj2, obj3, obj4, obj5)).T
-
-
 test_problems = {
     "ZDT1": zdt1func,
     "ZDT2": zdt2func,
     "ZDT3": zdt3func,
     "River pollution problem": riverfunc,
+    "Vehicle crashworthiness design problem": vehicle_crash_worthiness,
+    "Rocket injector design problem": rocket_injector,
 }
 
 
@@ -201,13 +168,7 @@ def add_objectives(objective_names, all_names):
         }
         for name in all_names
     ]
-    max_info_options = [
-        {
-            "label": name,
-            "value": name,
-        }
-        for name in objective_names
-    ]
+    max_info_options = [{"label": name, "value": name} for name in objective_names]
     analytical_function_inputs = [
         html.Label(
             [

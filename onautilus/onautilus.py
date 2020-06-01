@@ -157,7 +157,8 @@ class ONAUTILUS:
         request.content["total_steps"] = self.num_steps
         if self.preference_point is not None:
             request.content["preference"] = pd.DataFrame(
-                [self.preference_point], columns=self.objective_names
+                [self.preference_point * self.max_multiplier],
+                columns=self.objective_names,
             )
         else:
             # TODO *self.current_point????? Look into other requests as well

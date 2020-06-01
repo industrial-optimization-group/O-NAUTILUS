@@ -16,12 +16,12 @@ from sklearn.gaussian_process.kernels import Matern
 from sklearn.metrics import r2_score
 
 regressors = {
-    "Gaussian Process Regressor": GaussianProcessRegressor,
+    "Kriging": GaussianProcessRegressor,
     "Lipschitzian Regressor": LipschitzianRegressor,
 }
 
 regressor_hyperparameters = {
-    "Gaussian Process Regressor": {"kernel": Matern(nu=3 / 2)},
+    "Kriging": {"kernel": Matern(nu=3 / 2)},
     "Lipschitzian Regressor": None,
 }
 
@@ -40,7 +40,7 @@ def layout():
                             {"label": regressor, "value": regressor}
                             for regressor in regressors
                         ],
-                        value="Gaussian Process Regressor",
+                        value="Kriging",
                     ),
                 ]
             ),
@@ -91,7 +91,7 @@ def train_all_models(button_clicked, chosen_technique):
         objective_names=objective_names,
         variable_names=variable_names,
         bounds=bounds,
-        maximize=maximize
+        maximize=maximize,
     )
     # Use the following what analytical problems are supported.
     # Get problem from previous page instead of creating one here.

@@ -1,7 +1,6 @@
 from dash.exceptions import PreventUpdate
 import dash_core_components as dcc
 import dash_html_components as html
-import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
 import plotly.express as ex
@@ -13,61 +12,47 @@ from flask import session
 
 from onautilus.onautilus import ONAUTILUS
 from UI.app import app
-from UI.pages.tools2 import create_navigator_plot, extend_navigator_plot
+from UI.pages.tools import create_navigator_plot, extend_navigator_plot
 from onautilus.preferential_func_eval import preferential_func_eval as pfe
 
 
 def layout():
     objective_names = session["objective_names"]
-    max_multiplier = session["problem"]._max_multiplier
     return html.Div(
         children=[
-            dbc.Row(html.H1("Navigation", id="header_navigator")),
-            # Rows of Navigation elements (input boxes on left column, plots on right)
-            dbc.Row(
-                [
-                    dbc.Col(html.H3("Aspiration Levels"), width=2),
-                    dbc.Col(html.H3("Navigator View"), width=9),
-                ]
+            html.H1("Navigation", id="header_navigator"),
+            html.Div(
+                id="navigator_graph",
+                style={"width": "49%", "display": "inline-block"},
+                children=html.Label(
+                    ["Navigator View", dcc.Graph(id="navigator_graph_figure")]
+                ),
             ),
             html.Div(
-                id="navigation-elements",
-                children=[
-                    dbc.Row(
-                        [
-                            dbc.Col(
-                                dbc.Card(
-                                    [
-                                        html.H4(
-                                            (
-                                                f"Enter a value for {y}"
-                                                f" ({'Maximized' if max_m == -1 else 'Minimized'})"
-                                            ),
-                                            className="card-title",
-                                        ),
-                                        dcc.Input(
-                                            id=f"textbox{i+1}",
-                                            placeholder=f"Enter a value for {y}",
-                                            type="number",
-                                        ),
-                                    ]
-                                ),
-                                width=2,
-                            ),
-                            dbc.Col(
-                                dcc.Graph(
-                                    id=f"nav_graph{i+1}",
-                                    config={"displayModeBar": False},
-                                ),
-                                width=9,
-                            ),
-                        ],
-                        className="h-25",
-                    )
-                    for i, (y, max_m) in enumerate(zip(objective_names, max_multiplier))
-                ],
+                id="scatter_graph_div",
+                style={"width": "49%", "display": "inline-block"},
+                children=html.Label(
+                    ["Conventional View", dcc.Graph(id="scatter_graph")]
+                ),
             ),
-            html.Button("Pause", id="pausebutton", n_clicks=None),
+            html.Label(
+                [
+                    "Provide aspiration levels",
+                    html.Div(
+                        id="aspiration_text_boxes",
+                        children=[
+                            dcc.Input(
+                                id=f"textbox{i+1}",
+                                placeholder=f"Enter a value for {y}",
+                                type="number",
+                            )
+                            for i, y in enumerate(objective_names)
+                        ],
+                        hidden=False,
+                    ),
+                ]
+            ),
+            html.Button("Pause", id="pausebutton"),
             html.Button("Submit", id="submitbutton", disabled=True),
             dcc.Interval(
                 id="step_counter", interval=1 * 1000, n_intervals=0
@@ -80,13 +65,14 @@ def layout():
 
 @app.callback(
     [
-        Output(component_id="navigation-elements", component_property="children"),
+        Output(component_id="navigator_graph_figure", component_property="figure"),
+        Output("scatter_graph", "figure"),
         Output("pausebutton", "n_clicks"),
     ],
     [Input(component_id="step_counter", component_property="n_intervals")],
-    [State(component_id="navigation-elements", component_property="children")],
+    [State(component_id="navigator_graph_figure", component_property="figure")],
 )
-def iterate(n, navigation_elements):
+def iterate(n, navigator_graph):
     if n is None:
         raise PreventUpdate
     # Zeroth iteration
@@ -103,41 +89,41 @@ def iterate(n, navigation_elements):
             num_steps=20,
         )
         session["navigator"] = method
-        ranges_plot_request, _, preference_request = method.requests()
+        ranges_plot_request, scatter_data, preference_request = method.requests()
         session["preference"] = preference_request
-
-        for i, objective_name in enumerate(objective_names):
-            navigator_graph = create_navigator_plot(
-                ranges_plot_request, objective_name, True, True
-            )
-            navigation_elements[i]["props"]["children"][1]["props"]["children"][
-                "props"
-            ]["figure"] = navigator_graph
-        return (navigation_elements, 1)
+        navigator_graph_new = create_navigator_plot(ranges_plot_request)
+        # scatter_graph = createscatter2d(solutions_plot_request)
+        scatter_graph = ex.scatter_matrix(
+            scatter_data, dimensions=session["objective_names"], color="Source"
+        )
+        return (navigator_graph_new, scatter_graph, 1)
     # Other cases
     else:
-        objective_names = session["objective_names"]
         method = session["navigator"]
         preference_request = session["preference"]
-        ranges_plot_request, _, preference_request = method.iterate(preference_request)
+        ranges_plot_request, scatter_data, preference_request = method.iterate(
+            preference_request
+        )
         session["preference"] = preference_request
         if preference_request.interaction_priority == "required":
+            navigator_graph_new = navigator_graph
+            # scatter_graph = createscatter2d(solutions_plot_request)
+            scatter_graph = ex.scatter_matrix(
+                scatter_data, dimensions=session["objective_names"], color="Source"
+            )
             click_pause = 1
         else:
-            for i, objective_name in enumerate(objective_names):
-                navigator_graph = navigation_elements[i]["props"]["children"][1][
-                    "props"
-                ]["children"]["props"]["figure"]
-                navigator_graph = extend_navigator_plot(
-                    ranges_plot_request, objective_name, navigator_graph
-                )
-                navigation_elements[i]["props"]["children"][1]["props"]["children"][
-                    "props"
-                ]["figure"] = navigator_graph
+            navigator_graph_new = extend_navigator_plot(
+                ranges_plot_request, navigator_graph
+            )
+            # scatter_graph = createscatter2d(solutions_plot_request)
+            scatter_graph = ex.scatter_matrix(
+                scatter_data, dimensions=session["objective_names"], color="Source"
+            )
             click_pause = 0
-        # if navigator_graphs is None:
-        #     navigator_graph_new = create_navigator_plot(ranges_plot_request)
-        return (navigation_elements, click_pause)
+        if navigator_graph is None:
+            navigator_graph_new = create_navigator_plot(ranges_plot_request)
+        return (navigator_graph_new, scatter_graph, click_pause)
 
 
 @app.callback(
@@ -145,39 +131,36 @@ def iterate(n, navigation_elements):
         Output("step_counter", "disabled"),
         Output("pausebutton", "children"),
         Output("submitbutton", "disabled"),
-        Output("pausewindow", "children"),
+        Output("aspiration_text_boxes", "hidden"),
+        Output("pausewindow", "children")
+        # *[Output(f"textbox{i+1}", "value") for i in range(2)]
     ],
     [Input("pausebutton", "n_clicks")],
-    [State("pausebutton", "children")],
+    [State("pausebutton", "children"), State("scatter_graph", "figure")],
 )
-def pauseevent(pauseclick, pausevalue):
+def pauseevent(pauseclick, pausevalue, scatter_graph):
     if pauseclick is None:
         # Prevents pausing when initializing or other non-pausing events
-        return (True, "Play", False, pausewindow())
+        return (True, "Play", False, False, pausewindow(scatter_graph))
         # return (True, "Play", False, False, False)
     if pausevalue == "Pause":
         if pauseclick == 0:
-            return (False, "Pause", True, None)
-        return (True, "Play", False, pausewindow())
+            return (False, "Pause", True, True, None)
+        return (True, "Play", False, False, pausewindow(scatter_graph))
     elif pausevalue == "Play":
-        return (False, "Pause", True, None)
+        return (False, "Pause", True, True, None)
 
 
 @app.callback(
     Output("callback_blackhole", "children"),
     [Input("submitbutton", "n_clicks")],
-    [State("navigation-elements", "children")],
+    [State("aspiration_text_boxes", "children")],
 )
-def submitevent(submitclick, navigation_elements):
+def submitevent(submitclick, preference_value_div):
     if submitclick is None:
         raise PreventUpdate
     preference_request = session["preference"]
-    preference_values = [
-        element["props"]["children"][0]["props"]["children"]["props"]["children"][1][
-            "props"
-        ]["value"]
-        for element in navigation_elements
-    ]
+    preference_values = [element["props"]["value"] for element in preference_value_div]
     pref_value = pd.DataFrame(
         [preference_values],
         columns=preference_request.content["dimensions_data"].columns,
@@ -188,15 +171,10 @@ def submitevent(submitclick, navigation_elements):
     return None
 
 
-def pausewindow():
-    long_data = session["navigator"].request_long_data()
+def pausewindow(scatter_graph):
+    ranges_request = session["navigator"].request_ranges_plot()
+    reference = ranges_request.content["current_point"].values[0]
     objective_names = session["objective_names"]
-    reference = long_data[long_data["Source"] == "Preference point"][
-        objective_names
-    ].values[0]
-    scatter_graph = ex.scatter_matrix(
-        long_data, dimensions=session["objective_names"], color="Source"
-    )
     return (
         html.Div(
             [
@@ -219,6 +197,7 @@ def pausewindow():
                         html.Button("Evaluate new point", id="functionevaluation"),
                         html.Div(
                             id="func_eval_results_div",
+                            style={"width": "49%", "display": "inline-block"},
                             children=[
                                 dcc.Graph(id="func_eval_results", figure=scatter_graph)
                             ],
@@ -234,9 +213,15 @@ def pausewindow():
 @app.callback(
     Output("func_eval_results", "figure"),
     [Input("functionevaluation", "n_clicks")],
-    [State("mei_text_boxes", "children"), State("func_eval_results", "figure")],
+    [
+        State("mei_text_boxes", "children"),
+        State("scatter_graph", "children"),
+        State("func_eval_results", "figure"),
+    ],
 )
-def function_evaluation(button_press, mei_div, updated_scatter_graph):
+def function_evaluation(
+    button_press, mei_div, scatter_graph: ex.scatter, updated_scatter_graph
+):
     if button_press is None:
         raise PreventUpdate
     if updated_scatter_graph is not None:
