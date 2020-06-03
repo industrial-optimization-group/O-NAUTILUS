@@ -1,6 +1,7 @@
 from flask import session
 
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -29,45 +30,64 @@ optimizer_hyperparameters = {"n_iterations": 6, "n_gen_per_iter": 50}
 def layout():
     return html.Div(
         [
-            html.H1("Optimization", id="header_optimize"),
-            html.Label(
-                [
-                    "Choose the optimization algorithm",
-                    dcc.Dropdown(
-                        id="optimization_algorithm",
-                        options=[
-                            {"label": optimizer, "value": optimizer}
-                            for optimizer in optimizers
-                        ],
-                        value="RVEA",
-                    ),
-                ]
+            dbc.Row(
+                dbc.Col(
+                    html.H1("Optimization", id="header_optimize"),
+                    className="row justify-content-center",
+                )
             ),
-            html.Label(
+            dbc.Row(
                 [
-                    "Choose the selection type",
-                    dcc.Dropdown(
-                        id="selection_type",
-                        options=[
-                            {"label": sel_tpye, "value": sel_tpye}
-                            for sel_tpye in selection_type
-                        ],
-                        value="Optimistic",
+                    dbc.Col(
+                        html.Label(
+                            [
+                                "Choose the optimization algorithm",
+                                dcc.Dropdown(
+                                    id="optimization_algorithm",
+                                    options=[
+                                        {"label": optimizer, "value": optimizer}
+                                        for optimizer in optimizers
+                                    ],
+                                    value="RVEA",
+                                ),
+                            ]
+                        ),
+                        width=2,
                     ),
-                ]
+                    dbc.Col(
+                        html.Label(
+                            [
+                                "Choose the selection type",
+                                dcc.Dropdown(
+                                    id="selection_type",
+                                    options=[
+                                        {"label": sel_tpye, "value": sel_tpye}
+                                        for sel_tpye in selection_type
+                                    ],
+                                    value="Optimistic",
+                                ),
+                            ]
+                        ),
+                        width=2,
+                    ),
+                ],
+                justify="center",
             ),
-            dcc.Loading(
-                [
-                    html.Button("Optimize problem", id="optimize_button"),
+            dbc.Row(
+                dbc.Col(
+                    dcc.Loading([dbc.Button("Optimize problem", id="optimize_button")]),
+                    className="row justify-content-center",
+                )
+            ),
+            dbc.Row(
+                dbc.Col(
                     html.Div(
                         id="optimization_graph_div",
                         hidden=True,
-                        children=[
-                            dcc.Markdown(id="optimization_graph_md"),
-                            html.Div(id="optimization_graph"),
-                        ],
+                        children=[html.Div(id="optimization_graph")],
                     ),
-                ]
+                    className="row justify-content-center",
+                )
             ),
         ]
     )
@@ -76,7 +96,6 @@ def layout():
 @app.callback(
     [
         Output("optimization_graph_div", "hidden"),
-        Output("optimization_graph_md", "children"),
         Output("optimization_graph", "children"),
     ],
     [Input("optimize_button", "n_clicks")],
@@ -133,4 +152,4 @@ def optimize(clicked, chosen_algorithm, chosen_selection_type):
         optimistic_front_evaluated, ignore_index=True
     )
     figure = ex.scatter_matrix(data, dimensions=problem.objective_names, color="Source")
-    return (False, "", dcc.Graph(figure=figure, id="graph"))
+    return (False, dcc.Graph(figure=figure, id="graph"))

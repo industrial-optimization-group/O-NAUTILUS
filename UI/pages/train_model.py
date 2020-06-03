@@ -1,6 +1,7 @@
 from flask import session
 
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -30,21 +31,38 @@ def layout():
     objective_names = session["objective_names"]
     return html.Div(
         [
-            html.H1("Surrogate Modelling", id="header_train_model"),
-            html.Label(
-                [
-                    "Choose the surrogate modelling technique",
-                    dcc.Dropdown(
-                        id="surrogate_modelling_technique",
-                        options=[
-                            {"label": regressor, "value": regressor}
-                            for regressor in regressors
-                        ],
-                        value="Kriging",
-                    ),
-                ]
+            # Header
+            dbc.Row(
+                dbc.Col(
+                    html.H1("Surrogate Modelling", id="header_train_model"),
+                    className="row justify-content-center",
+                )
             ),
-            dcc.Loading([html.Button("Train models", id="train_models")]),
+            # Modelling technique dropdown
+            dbc.Row(
+                dbc.Col(
+                    html.Label(
+                        [
+                            "Choose the surrogate modelling technique",
+                            dcc.Dropdown(
+                                id="surrogate_modelling_technique",
+                                options=[
+                                    {"label": regressor, "value": regressor}
+                                    for regressor in regressors
+                                ],
+                                value="Kriging",
+                            ),
+                        ]
+                    ),
+                    className="row justify-content-center",
+                )
+            ),
+            dbc.Row(
+                dbc.Col(
+                    dcc.Loading([dbc.Button("Train models", id="train_models")]),
+                    className="row justify-content-center",
+                )
+            ),
             html.Div(
                 id="results_selection_train_models",
                 hidden=True,

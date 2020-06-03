@@ -2,6 +2,7 @@ import base64
 import io
 
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 import dash_table
 import pandas as pd
@@ -15,24 +16,35 @@ from UI.app import app
 def layout():
     return html.Div(
         [
-            html.H1("Data Upload", id="header_data_upload"),
-            dcc.Upload(
-                id="upload-data",
-                children=html.Div(["Drag and Drop or ", html.A("Select Files")]),
-                style={
-                    "width": "100%",
-                    "height": "60px",
-                    "lineHeight": "60px",
-                    "borderWidth": "1px",
-                    "borderStyle": "dashed",
-                    "borderRadius": "5px",
-                    "textAlign": "center",
-                    "margin": "10px",
-                },
-                # Allow multiple files to be uploaded
-                multiple=True,
+            dbc.Row(
+                dbc.Col(
+                    html.H1("Data Upload", id="header_data_upload"),
+                    className="row justify-content-center",
+                )
             ),
-            html.Div(id="output-data-upload"),
+            dbc.Row(
+                dbc.Col(
+                    dcc.Upload(
+                        id="upload-data",
+                        children=html.Div(
+                            ["Drag and Drop or ", html.A("Select Files")]
+                        ),
+                        style={
+                            "width": "100%",
+                            "height": "60px",
+                            "lineHeight": "60px",
+                            "borderWidth": "1px",
+                            "borderStyle": "dashed",
+                            "borderRadius": "5px",
+                            "textAlign": "center",
+                        },
+                        # Allow multiple files to be uploaded
+                        multiple=True,
+                    ),
+                    width={"size": 6, "offset": 3},
+                )
+            ),
+            dbc.Row(dbc.Col(html.Div(id="output-data-upload"))),
         ]
     )
 

@@ -12,7 +12,7 @@ import dash_bootstrap_components as dbc
 # ]
 # external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 
 # random key. make this available to the user?
 # If two keys match, the older session will clash with the new session

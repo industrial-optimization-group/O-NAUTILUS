@@ -1,6 +1,7 @@
 from flask import session
 
 import dash_core_components as dcc
+import dash_bootstrap_components as dbc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from onautilus.problems import (
@@ -32,93 +33,122 @@ def layout():
     names = session["original_dataset"].columns.tolist()
     return html.Div(
         [
-            html.H1("Problem Formulation", id="header_problem_formulation"),
+            dbc.Row(
+                dbc.Col(
+                    html.H1("Problem Formulation", id="header_problem_formulation"),
+                    className="row justify-content-center",
+                )
+            ),
             # Hidden div storing column names
             html.Div(id="column_names", style={"display": "none"}, children=names),
             # Dropdown 1: decision variables
-            html.Label(
-                id="testlabel",
-                children=[
-                    "Choose decision variables",
-                    dcc.Dropdown(
-                        id="decision_variables",
-                        options=[
-                            {"label": name, "value": name, "disabled": False}
-                            for name in names
+            dbc.Row(
+                dbc.Col(
+                    html.Label(
+                        id="testlabel",
+                        children=[
+                            "Choose decision variables",
+                            dcc.Dropdown(
+                                id="decision_variables",
+                                options=[
+                                    {"label": name, "value": name, "disabled": False}
+                                    for name in names
+                                ],
+                                value=[name for name in names if "x" in name],
+                                placeholder="Choose decision variables",
+                                multi=True,
+                            ),
                         ],
-                        value=[name for name in names if "x" in name],
-                        placeholder="Choose decision variables",
-                        multi=True,
-                    ),
-                ],
+                    )
+                )
             ),
             # Radio button 1: Decision variables
-            html.Label(
-                id="bounds",
-                children=[
-                    "Choose lower and upper bounds:",
-                    dcc.RadioItems(
-                        id="bounds_button",
-                        options=[
-                            {"label": "0-1 for all variables", "value": "0-1"},
-                            {"label": "Min-Max from dataset", "value": "min-max"},
+            dbc.Row(
+                dbc.Col(
+                    html.Label(
+                        id="bounds",
+                        children=[
+                            "Choose lower and upper bounds:",
+                            dcc.RadioItems(
+                                id="bounds_button",
+                                options=[
+                                    {"label": "0-1 for all variables", "value": "0-1"},
+                                    {
+                                        "label": "Min-Max from dataset",
+                                        "value": "min-max",
+                                    },
+                                ],
+                                labelStyle={"display": "inline-block"},
+                            ),
                         ],
-                        labelStyle={"display": "inline-block"},
-                    ),
-                ],
+                    )
+                )
             ),
             # Dropdown 2: objective function names
-            html.Label(
-                [
-                    "Choose objectives",
-                    dcc.Dropdown(
-                        id="objectives",
-                        options=[
-                            {"label": name, "value": name, "disabled": False}
-                            for name in names
-                        ],
-                        value=[name for name in names if "y" in name or "f" in name],
-                        placeholder="Choose objectives",
-                        multi=True,
-                    ),
-                ]
-            ),
-            # Textbox: Provide analytical functions
-            html.Label(
-                [
-                    "Provide analytical functions",
-                    html.Div(id="analytical_function_inputs", children=[]),
-                ]
+            dbc.Row(
+                dbc.Col(
+                    html.Label(
+                        [
+                            "Choose objectives",
+                            dcc.Dropdown(
+                                id="objectives",
+                                options=[
+                                    {"label": name, "value": name, "disabled": False}
+                                    for name in names
+                                ],
+                                value=[
+                                    name for name in names if "y" in name or "f" in name
+                                ],
+                                placeholder="Choose objectives",
+                                multi=True,
+                                style={"width": "300px"},
+                            ),
+                        ]
+                    )
+                )
             ),
             # Dropdown: maximize
-            html.Label(
-                [
-                    "Choose objectives to be maximized",
-                    dcc.Dropdown(
-                        id="objectives_max_info",
-                        options=[
-                            {"label": name, "value": name, "disabled": False}
-                            for name in names
-                        ],
-                        value=[name for name in names if "y" in name or "f" in name],
-                        placeholder="Choose objectives to be maximized",
-                        multi=True,
-                    ),
-                ]
+            dbc.Row(
+                dbc.Col(
+                    html.Label(
+                        [
+                            "Choose objectives to be maximized",
+                            dcc.Dropdown(
+                                id="objectives_max_info",
+                                options=[
+                                    {"label": name, "value": name, "disabled": False}
+                                    for name in names
+                                ],
+                                value=[
+                                    name for name in names if "y" in name or "f" in name
+                                ],
+                                placeholder="Choose objectives to be maximized",
+                                multi=True,
+                                style={"width": "300px"},
+                            ),
+                        ]
+                    )
+                )
             ),
             # Dropdown: choose a test function
-            html.Label(
-                [
-                    "Choose test functions:",
-                    dcc.Dropdown(
-                        id="test_functions",
-                        options=[
-                            {"label": name, "value": name} for name in test_problems
-                        ],
-                        placeholder="Choose a test function",
-                        multi=False,
-                    ),
-                ]
+            dbc.Row(
+                dbc.Col(
+                    html.Label(
+                        [
+                            "Choose test functions:",
+                            dcc.Dropdown(
+                                id="test_functions",
+                                options=[
+                                    {"label": name, "value": name}
+                                    for name in test_problems
+                                ],
+                                placeholder="Choose a test function",
+                                multi=False,
+                                style={"width": "300px"},
+                            ),
+                        ]
+                    )
+                )
             ),
             html.Label(["Problem Information:", html.Div(id="prob_info", children=[])]),
             html.Div(id="callback_blackhole_train", hidden=True),
@@ -148,11 +178,7 @@ def add_decision_vars(decision_variable_names, all_names):
 
 
 @app.callback(
-    [
-        Output("decision_variables", "options"),
-        Output("analytical_function_inputs", "children"),
-        Output("objectives_max_info", "options"),
-    ],
+    [Output("decision_variables", "options"), Output("objectives_max_info", "options")],
     [Input("objectives", "value")],
     [State("column_names", "children")],
 )
@@ -169,24 +195,8 @@ def add_objectives(objective_names, all_names):
         for name in all_names
     ]
     max_info_options = [{"label": name, "value": name} for name in objective_names]
-    analytical_function_inputs = [
-        html.Label(
-            [
-                f"Enter the analytical function for {objective}",
-                dcc.Input(
-                    placeholder=f"Enter the analytical function for {objective}",
-                    type="text",
-                    value="",
-                ),
-            ]
-        )
-        for objective in objective_names
-    ]
-    return (
-        decision_variable_names_restricted_options,
-        analytical_function_inputs,
-        max_info_options,
-    )
+
+    return (decision_variable_names_restricted_options, max_info_options)
 
 
 @app.callback(
@@ -249,3 +259,59 @@ def maximization_info(max_obj, prob_name, var_name, obj_name):
         f"Objectives to be maximized are {max_obj}."
     )
     return prob_info
+
+
+"""# Textbox: Provide analytical functions
+dbc.Row(
+    dbc.Col(
+        html.Label(
+            [
+                "Provide analytical functions",
+                html.Div(id="analytical_function_inputs", children=[]),
+            ]
+        )
+    )
+),
+
+@app.callback(
+    [
+        Output("decision_variables", "options"),
+        Output("analytical_function_inputs", "children"),
+        Output("objectives_max_info", "options"),
+    ],
+    [Input("objectives", "value")],
+    [State("column_names", "children")],
+)
+def add_objectives(objective_names, all_names):
+    if objective_names is None:
+        raise PreventUpdate
+    session["objective_names"] = objective_names
+    decision_variable_names_restricted_options = [
+        {
+            "label": name,
+            "value": name,
+            "disabled": True if name in objective_names else False,
+        }
+        for name in all_names
+    ]
+    max_info_options = [{"label": name, "value": name} for name in objective_names]
+    analytical_function_inputs = [
+        html.Label(
+            [
+                f"Enter the analytical function for {objective}",
+                dcc.Input(
+                    placeholder=f"Enter the analytical function for {objective}",
+                    type="text",
+                    value="",
+                ),
+            ]
+        )
+        for objective in objective_names
+    ]
+    return (
+        decision_variable_names_restricted_options,
+        analytical_function_inputs,
+        max_info_options,
+    )
+
+"""
