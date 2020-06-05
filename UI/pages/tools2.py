@@ -3,7 +3,6 @@ import numpy as np
 
 
 def create_navigator_plot(request, objective_name, have_x_label=False, legend=False):
-    ideal_nadir = request.content["dimensions_data"]
     total_steps = request.content["total_steps"]
 
     fig = go.Figure()
@@ -16,7 +15,7 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
         go.Scatter(
             x=[],
             y=[],
-            name=f"Optimistic Lower Bound",
+            name="Optimistic Lower Bound",
             showlegend=False,
             mode="lines+markers",
             line_color="yellow",
@@ -28,10 +27,10 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
             x=[],
             y=[],
             fill="tonexty",
-            name=f"Optimistic Reachable area",
+            name="Optimistic Reachable area",
             mode="lines+markers",
-            line_color="green",
-            fillcolor="yellow",
+            line_color="yellow",
+            fillcolor="rgba(255,255,0,0.5)",
             showlegend=legend,
         )
     )
@@ -40,7 +39,7 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
         go.Scatter(
             x=[],
             y=[],
-            name=f"Lower Bound",
+            name="Lower Bound",
             showlegend=False,
             mode="lines+markers",
             line_color="green",
@@ -52,10 +51,10 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
             x=[],
             y=[],
             fill="tonexty",
-            name=f"Reachable area",
+            name="Reachable area",
             mode="lines+markers",
             line_color="green",
-            fillcolor="green",
+            fillcolor="rgba(0,255,0,0.5)",
             showlegend=legend,
         )
     )
@@ -64,11 +63,11 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
         go.Scatter(
             x=[],
             y=[],
-            name=f"Preference",
+            name="Preference",
             showlegend=legend,
-            mode="lines+markers",
-            line_dash="dash",
-            line_color="brown",
+            mode="lines",
+            line_dash="solid",
+            line_color="black",
         )
     )
     # ideal point
@@ -76,7 +75,7 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
         go.Scatter(
             x=[],
             y=[],
-            name=f"ideal",
+            name="ideal",
             mode="lines+markers",
             line_dash="dash",
             line_color="green",
@@ -88,7 +87,7 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
         go.Scatter(
             x=[],
             y=[],
-            name=f"nadir",
+            name="nadir",
             mode="lines+markers",
             line_dash="dash",
             line_color="red",

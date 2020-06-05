@@ -52,12 +52,16 @@ home_page = html.Div(
                             id="onautilus_button",
                             n_clicks_timestamp=-1,
                             href="/upload#O-NAUTILUS",
+                            className="mr-1 mt-1",
+                            color="primary",
                         ),
                         dbc.Button(
                             "Coloured Parallel Coordinates",
                             id="cpc_button",
                             n_clicks_timestamp=-1,
                             href="/upload#CPC",
+                            className="mr-1 mt-1",
+                            color="primary",
                         ),
                     ]
                 ),
@@ -79,12 +83,24 @@ def navbuttons(prev, home, next_):
                             id="prev_button",
                             n_clicks_timestamp=-1,
                             href=prev,
+                            className="mr-1 mt-1",
+                            color="primary",
                         ),
                         dbc.Button(
-                            "Home", id="home_button", n_clicks_timestamp=-1, href=home
+                            "Home",
+                            id="home_button",
+                            n_clicks_timestamp=-1,
+                            href=home,
+                            className="mr-1 mt-1",
+                            color="primary",
                         ),
                         dbc.Button(
-                            "Next", id="next_button", n_clicks_timestamp=-1, href=next_
+                            "Next",
+                            id="next_button",
+                            n_clicks_timestamp=-1,
+                            href=next_,
+                            className="mr-1 mt-1",
+                            color="primary",
                         ),
                     ]
                 ),

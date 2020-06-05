@@ -59,7 +59,16 @@ def layout():
             ),
             dbc.Row(
                 dbc.Col(
-                    dcc.Loading([dbc.Button("Train models", id="train_models")]),
+                    dcc.Loading(
+                        [
+                            dbc.Button(
+                                "Train models",
+                                id="train_models",
+                                className="mr-1 mt-1",
+                                color="primary",
+                            )
+                        ]
+                    ),
                     className="row justify-content-center",
                 )
             ),

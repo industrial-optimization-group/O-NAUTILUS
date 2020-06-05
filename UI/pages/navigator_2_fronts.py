@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.express as ex
 import plotly.graph_objects as go
 
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output, State, ALL
 from flask import session
 
 
@@ -16,18 +16,27 @@ from UI.app import app
 from UI.pages.tools2 import create_navigator_plot, extend_navigator_plot
 from onautilus.preferential_func_eval import preferential_func_eval as pfe
 
+from desdeo_tools.interaction.request import RequestError
+
 
 def layout():
     objective_names = session["objective_names"]
     max_multiplier = session["problem"]._max_multiplier
     return html.Div(
         children=[
-            dbc.Row(html.H1("Navigation", id="header_navigator")),
+            dbc.Row(
+                dbc.Col(
+                    html.H1("Navigation", id="header_navigator"),
+                    className="row justify-content-center",
+                )
+            ),
             # Rows of Navigation elements (input boxes on left column, plots on right)
             dbc.Row(
                 [
-                    dbc.Col(html.H3("Aspiration Levels"), width=2),
-                    dbc.Col(html.H3("Navigator View"), width=9),
+                    dbc.Col(
+                        html.H3("Aspiration Levels"), width={"size": 2, "offset": 1}
+                    ),
+                    dbc.Col(html.H3("Navigator View"), width=8),
                 ]
             ),
             html.Div(
@@ -38,7 +47,7 @@ def layout():
                             dbc.Col(
                                 dbc.Card(
                                     [
-                                        html.H4(
+                                        html.P(
                                             (
                                                 f"Enter a value for {y}"
                                                 f" ({'Maximized' if max_m == -1 else 'Minimized'})"
@@ -46,47 +55,74 @@ def layout():
                                             className="card-title",
                                         ),
                                         dcc.Input(
-                                            id=f"textbox{i+1}",
+                                            id={"type": "pref_input", "name": y},
                                             placeholder=f"Enter a value for {y}",
                                             type="number",
                                         ),
                                     ]
                                 ),
-                                width=2,
+                                width={"size": 2, "offset": 1},
                             ),
                             dbc.Col(
                                 dcc.Graph(
-                                    id=f"nav_graph{i+1}",
+                                    id={"type": "nav_graph", "name": y},
                                     config={"displayModeBar": False},
                                 ),
-                                width=9,
+                                width=8,
                             ),
                         ],
                         className="h-25",
                     )
-                    for i, (y, max_m) in enumerate(zip(objective_names, max_multiplier))
+                    for y, max_m in zip(objective_names, max_multiplier)
                 ],
             ),
-            html.Button("Pause", id="pausebutton", n_clicks=None),
-            html.Button("Submit", id="submitbutton", disabled=True),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.ButtonGroup(
+                            [
+                                dbc.Button(
+                                    "Pause",
+                                    id="pausebutton",
+                                    n_clicks=None,
+                                    className="mr-1 mt-1 mb-3",
+                                    color="primary",
+                                ),
+                                dbc.Button(
+                                    "Submit",
+                                    id="submitbutton",
+                                    disabled=True,
+                                    className="mr-1 mt-1 mb-3",
+                                    color="primary",
+                                ),
+                            ]
+                        ),
+                        className="row justify-content-center",
+                    )
+                ]
+            ),
             dcc.Interval(
-                id="step_counter", interval=1 * 1000, n_intervals=0
+                id="step_counter", interval=5 * 100, n_intervals=0
             ),  # in milliseconds
-            html.Div(id="pausewindow"),
+            dbc.Row(dbc.Col(html.Div(id="pausewindow"))),
             html.Div(id="callback_blackhole"),
+            html.Div(id="continue_iterate", n_clicks=0, children=1, hidden=True),
         ]
     )
 
 
 @app.callback(
     [
-        Output(component_id="navigation-elements", component_property="children"),
-        Output("pausebutton", "n_clicks"),
+        Output({"type": "nav_graph", "name": ALL}, "figure"),
+        Output("continue_iterate", "children"),
     ],
     [Input(component_id="step_counter", component_property="n_intervals")],
-    [State(component_id="navigation-elements", component_property="children")],
+    [
+        State({"type": "nav_graph", "name": ALL}, "figure"),
+        State("continue_iterate", "children"),
+    ],
 )
-def iterate(n, navigation_elements):
+def iterate(n, nav_figures, continue_iterate_state):
     if n is None:
         raise PreventUpdate
     # Zeroth iteration
@@ -100,44 +136,39 @@ def iterate(n, navigation_elements):
             optimistic_data=surrogate_data,
             objective_names=objective_names,
             max_multiplier=max_multiplier,
-            num_steps=20,
+            num_steps=100,
         )
         session["navigator"] = method
         ranges_plot_request, _, preference_request = method.requests()
         session["preference"] = preference_request
-
-        for i, objective_name in enumerate(objective_names):
-            navigator_graph = create_navigator_plot(
-                ranges_plot_request, objective_name, True, True
-            )
-            navigation_elements[i]["props"]["children"][1]["props"]["children"][
-                "props"
-            ]["figure"] = navigator_graph
-        return (navigation_elements, 1)
+        session["preference_provided"] = False
+        nav_figures = [
+            create_navigator_plot(ranges_plot_request, objective_name, True, True)
+            for objective_name in objective_names
+        ]
+        return (nav_figures, 0)
     # Other cases
     else:
+        if continue_iterate_state == 0:
+            if not session["preference_provided"]:
+                raise PreventUpdate
         objective_names = session["objective_names"]
         method = session["navigator"]
         preference_request = session["preference"]
         ranges_plot_request, _, preference_request = method.iterate(preference_request)
         session["preference"] = preference_request
         if preference_request.interaction_priority == "required":
-            click_pause = 1
+            continue_iterate = 0
+            session["preference_provided"] = False
         else:
-            for i, objective_name in enumerate(objective_names):
-                navigator_graph = navigation_elements[i]["props"]["children"][1][
-                    "props"
-                ]["children"]["props"]["figure"]
-                navigator_graph = extend_navigator_plot(
-                    ranges_plot_request, objective_name, navigator_graph
-                )
-                navigation_elements[i]["props"]["children"][1]["props"]["children"][
-                    "props"
-                ]["figure"] = navigator_graph
-            click_pause = 0
+            nav_figures = [
+                extend_navigator_plot(ranges_plot_request, objective_name, nav_figure)
+                for nav_figure, objective_name in zip(nav_figures, objective_names)
+            ]
+            continue_iterate = 1
         # if navigator_graphs is None:
         #     navigator_graph_new = create_navigator_plot(ranges_plot_request)
-        return (navigation_elements, click_pause)
+        return (nav_figures, continue_iterate)
 
 
 @app.callback(
@@ -145,45 +176,52 @@ def iterate(n, navigation_elements):
         Output("step_counter", "disabled"),
         Output("pausebutton", "children"),
         Output("submitbutton", "disabled"),
+        Output({"type": "pref_input", "name": ALL}, "disabled"),
         Output("pausewindow", "children"),
     ],
     [Input("pausebutton", "n_clicks")],
-    [State("pausebutton", "children")],
+    [
+        State("pausebutton", "children"),
+        State({"type": "pref_input", "name": ALL}, "disabled"),
+    ],
 )
-def pauseevent(pauseclick, pausevalue):
+def pauseevent(pauseclick, pausevalue, input_box_state):
     if pauseclick is None:
         # Prevents pausing when initializing or other non-pausing events
-        return (True, "Play", False, pausewindow())
+        raise PreventUpdate
         # return (True, "Play", False, False, False)
     if pausevalue == "Pause":
         if pauseclick == 0:
-            return (False, "Pause", True, None)
-        return (True, "Play", False, pausewindow())
+            return (False, "Pause", True, [True] * len(input_box_state), None)
+        return (True, "Play", False, [False] * len(input_box_state), pausewindow())
+    # If paused
     elif pausevalue == "Play":
-        return (False, "Pause", True, None)
+        if session["preference_provided"]:
+            # Start playing if preference provided
+            return (False, "Pause", True, [True] * len(input_box_state), None)
+        else:
+            raise PreventUpdate
 
 
 @app.callback(
     Output("callback_blackhole", "children"),
     [Input("submitbutton", "n_clicks")],
-    [State("navigation-elements", "children")],
+    [State({"type": "pref_input", "name": ALL}, "value")],
 )
-def submitevent(submitclick, navigation_elements):
+def submitevent(submitclick, preference_values):
     if submitclick is None:
         raise PreventUpdate
     preference_request = session["preference"]
-    preference_values = [
-        element["props"]["children"][0]["props"]["children"]["props"]["children"][1][
-            "props"
-        ]["value"]
-        for element in navigation_elements
-    ]
     pref_value = pd.DataFrame(
         [preference_values],
         columns=preference_request.content["dimensions_data"].columns,
     )
     session["pref_value"] = pref_value
-    preference_request.response = pref_value
+    try:
+        preference_request.response = pref_value
+        session["preference_provided"] = True
+    except RequestError as err:
+        error_statement = err
     session["preference"] = preference_request
     return None
 
@@ -200,32 +238,68 @@ def pausewindow():
     return (
         html.Div(
             [
-                html.Label(
+                dbc.Row(
+                    dbc.Col(
+                        html.H3("New function evaluations"),
+                        className="row justify-content-center",
+                    )
+                ),
+                dbc.Row(
+                    dbc.Col(
+                        html.H5(
+                            children="Enter a reference point for m-ASF calculation"
+                        ),
+                        className="row justify-content-center",
+                    )
+                ),
+                dbc.Row(
                     [
-                        "New function evaluations",
-                        html.H5(children="Enter a reference point for MEI calculation"),
-                        html.Div(
-                            id="mei_text_boxes",
-                            children=[
-                                dcc.Input(
-                                    id=f"meibox{i+1}",
-                                    placeholder=f"Enter a value for {y}",
-                                    type="number",
-                                    value=reference[i],
+                        dbc.Col(
+                            [
+                                dbc.Card(
+                                    [
+                                        html.P(
+                                            (f"Enter a value for {y}"),
+                                            className="card-title",
+                                        ),
+                                        dcc.Input(
+                                            id={"type": "mei-preference", "index": i},
+                                            placeholder=f"Enter a value for {y}",
+                                            type="number",
+                                            value=reference[i],
+                                        ),
+                                    ]
                                 )
-                                for i, y in enumerate(objective_names)
                             ],
+                            width=2,
+                        )
+                        for i, y in enumerate(objective_names)
+                    ],
+                    justify="center",
+                ),
+                dbc.Row(
+                    dbc.Col(
+                        dbc.Button(
+                            "Evaluate new point",
+                            id="functionevaluation",
+                            className="mr-1 mt-1",
+                            color="primary",
                         ),
-                        html.Button("Evaluate new point", id="functionevaluation"),
-                        html.Div(
-                            id="func_eval_results_div",
-                            children=[
-                                dcc.Graph(id="func_eval_results", figure=scatter_graph)
-                            ],
-                        ),
+                        className="row justify-content-center",
+                    )
+                ),
+                dbc.Row(
+                    dbc.Col(
+                        dcc.Graph(id="func_eval_results", figure=scatter_graph),
+                        className="row justify-content-center",
+                    )
+                ),
+                dbc.Row(
+                    dbc.Col(
                         dcc.Link("Go back to training page", href="/train#O-NAUTILUS"),
-                    ]
-                )
+                        className="row justify-content-center",
+                    )
+                ),
             ]
         ),
     )
@@ -234,9 +308,12 @@ def pausewindow():
 @app.callback(
     Output("func_eval_results", "figure"),
     [Input("functionevaluation", "n_clicks")],
-    [State("mei_text_boxes", "children"), State("func_eval_results", "figure")],
+    [
+        State({"type": "mei-preference", "index": ALL}, "value"),
+        State("func_eval_results", "figure"),
+    ],
 )
-def function_evaluation(button_press, mei_div, updated_scatter_graph):
+def function_evaluation(button_press, mei_prefs, updated_scatter_graph):
     if button_press is None:
         raise PreventUpdate
     if updated_scatter_graph is not None:
@@ -248,10 +325,7 @@ def function_evaluation(button_press, mei_div, updated_scatter_graph):
     data = session["original_dataset"]
     optimistic_data = session["optimistic_data"]
     problem = optimizer.population.problem
-    ref_point = (
-        np.asarray([element["props"]["value"] for element in mei_div])
-        * problem._max_multiplier
-    )
+    ref_point = np.asarray(mei_prefs) * problem._max_multiplier
     var_names = problem.get_variable_names()
     obj_names = problem.get_objective_names()
     ideal_current = (

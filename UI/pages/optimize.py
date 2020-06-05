@@ -24,7 +24,7 @@ selection_type = {
     "Mean": {"selection_type": "mean"},
     "Robust": {"selection_type": "robust"},
 }
-optimizer_hyperparameters = {"n_iterations": 6, "n_gen_per_iter": 50}
+optimizer_hyperparameters = {"n_iterations": 10, "n_gen_per_iter": 20}
 
 
 def layout():
@@ -75,7 +75,16 @@ def layout():
             ),
             dbc.Row(
                 dbc.Col(
-                    dcc.Loading([dbc.Button("Optimize problem", id="optimize_button")]),
+                    dcc.Loading(
+                        [
+                            dbc.Button(
+                                "Optimize problem",
+                                id="optimize_button",
+                                className="mr-1 mt-1",
+                                color="primary",
+                            )
+                        ]
+                    ),
                     className="row justify-content-center",
                 )
             ),
@@ -110,7 +119,7 @@ def optimize(clicked, chosen_algorithm, chosen_selection_type):
         problem,
         use_surrogates=True,
         **optimizer_hyperparameters,
-        **selection_type[chosen_selection_type]
+        **selection_type[chosen_selection_type],
     )
     while optimizer.continue_evolution():
         optimizer.iterate()
