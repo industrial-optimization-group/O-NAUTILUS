@@ -1,126 +1,104 @@
 import plotly.graph_objects as go
 import numpy as np
 
-from plotly.subplots import make_subplots
 
-
-def create_navigator_plot(request):
-    ideal_nadir = request.content["dimensions_data"]
+def create_navigator_plot(request, objective_name, have_x_label=False, legend=False):
     total_steps = request.content["total_steps"]
 
-    fig = make_subplots(
-        rows=ideal_nadir.shape[1],
-        cols=1,
-        shared_xaxes=True,
-        subplot_titles=list(ideal_nadir.columns),
-    )
-    fig.update_xaxes(title_text="Steps", row=ideal_nadir.shape[1], col=1)
+    fig = go.Figure()
+    fig.update_layout(height=200, margin={"t": 0})
+    if have_x_label:
+        fig.update_xaxes(title_text="Steps")
     fig.update_xaxes(range=[0, total_steps])
-    for i in range(ideal_nadir.shape[1]):  # Looping over subplots/rows/objectives
-        legend = True if i == 0 else False
-        # Optimistic lower bound
-        fig.add_trace(
-            go.Scatter(
-                x=[],
-                y=[],
-                name=f"Optimistic Lower Bound",
-                showlegend=False,
-                mode="lines+markers",
-                line_color="yellow",
-            ),
-            row=i + 1,
-            col=1,
+    # Optimistic lower bound
+    fig.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            name="Optimistic Lower Bound",
+            showlegend=False,
+            mode="lines+markers",
+            line_color="yellow",
         )
-        # Optimistic upper bound
-        fig.add_trace(
-            go.Scatter(
-                x=[],
-                y=[],
-                fill="tonexty",
-                name=f"Optimistic Reachable area",
-                mode="lines+markers",
-                line_color="green",
-                fillcolor="yellow",
-                showlegend=legend,
-            ),
-            row=i + 1,
-            col=1,
+    )
+    # Optimistic upper bound
+    fig.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            fill="tonexty",
+            name="Optimistic Reachable area",
+            mode="lines+markers",
+            line_color="yellow",
+            fillcolor="rgba(255,255,0,0.5)",
+            showlegend=legend,
         )
-        # lower bound
-        fig.add_trace(
-            go.Scatter(
-                x=[],
-                y=[],
-                name=f"Lower Bound",
-                showlegend=False,
-                mode="lines+markers",
-                line_color="green",
-            ),
-            row=i + 1,
-            col=1,
+    )
+    # lower bound
+    fig.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            name="Lower Bound",
+            showlegend=False,
+            mode="lines+markers",
+            line_color="green",
         )
-        # upper bound
-        fig.add_trace(
-            go.Scatter(
-                x=[],
-                y=[],
-                fill="tonexty",
-                name=f"Reachable area",
-                mode="lines+markers",
-                line_color="green",
-                fillcolor="green",
-                showlegend=legend,
-            ),
-            row=i + 1,
-            col=1,
+    )
+    # upper bound
+    fig.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            fill="tonexty",
+            name="Reachable area",
+            mode="lines+markers",
+            line_color="green",
+            fillcolor="rgba(0,255,0,0.5)",
+            showlegend=legend,
         )
-        # preference
-        fig.add_trace(
-            go.Scatter(
-                x=[],
-                y=[],
-                name=f"Preference",
-                showlegend=legend,
-                mode="lines+markers",
-                line_dash="dash",
-                line_color="brown",
-            ),
-            row=i + 1,
-            col=1,
+    )
+    # preference
+    fig.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            name="Preference",
+            showlegend=legend,
+            mode="lines",
+            line_dash="solid",
+            line_color="black",
         )
-        # ideal point
-        fig.add_trace(
-            go.Scatter(
-                x=[],
-                y=[],
-                name=f"ideal",
-                mode="lines+markers",
-                line_dash="dash",
-                line_color="green",
-                showlegend=legend,
-            ),
-            row=i + 1,
-            col=1,
+    )
+    # ideal point
+    fig.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            name="ideal",
+            mode="lines+markers",
+            line_dash="dash",
+            line_color="green",
+            showlegend=legend,
         )
-        # nadir point
-        fig.add_trace(
-            go.Scatter(
-                x=[],
-                y=[],
-                name=f"nadir",
-                mode="lines+markers",
-                line_dash="dash",
-                line_color="red",
-                showlegend=legend,
-            ),
-            row=i + 1,
-            col=1,
+    )
+    # nadir point
+    fig.add_trace(
+        go.Scatter(
+            x=[],
+            y=[],
+            name="nadir",
+            mode="lines+markers",
+            line_dash="dash",
+            line_color="red",
+            showlegend=legend,
         )
-    fig = extend_navigator_plot(request, fig)
+    )
+    fig = extend_navigator_plot(request, objective_name, fig)
     return fig
 
 
-def extend_navigator_plot(request, fig):
+def extend_navigator_plot(request, objective_name, fig):
     content = request.content
     bounds = content["data"]
     ideal_nadir = content["dimensions_data"]
@@ -129,21 +107,16 @@ def extend_navigator_plot(request, fig):
     if np.isnan(preference_point.values[0][0]):
         preference_point = ideal_nadir.loc["ideal"].to_frame(name=0).transpose()
 
-    for row, objective_name in enumerate(ideal_nadir.columns):
-        for trace in range(7):
-            fig["data"][7 * row + trace]["x"] += (steps_taken,)
-        fig["data"][7 * row + 0]["y"] += (
-            bounds[objective_name]["optimistic_lower_bound"],
-        )
-        fig["data"][7 * row + 1]["y"] += (
-            bounds[objective_name]["optimistic_upper_bound"],
-        )
-        fig["data"][7 * row + 2]["y"] += (bounds[objective_name]["lower_bound"],)
-        fig["data"][7 * row + 3]["y"] += (bounds[objective_name]["upper_bound"],)
+    for trace in range(7):
+        fig["data"][trace]["x"] += (steps_taken,)
+    fig["data"][0]["y"] += (bounds[objective_name]["optimistic_lower_bound"],)
+    fig["data"][1]["y"] += (bounds[objective_name]["optimistic_upper_bound"],)
+    fig["data"][2]["y"] += (bounds[objective_name]["lower_bound"],)
+    fig["data"][3]["y"] += (bounds[objective_name]["upper_bound"],)
 
-        fig["data"][7 * row + 4]["y"] += (preference_point[objective_name][0],)
-        fig["data"][7 * row + 5]["y"] += (ideal_nadir[objective_name]["ideal"],)
-        fig["data"][7 * row + 6]["y"] += (ideal_nadir[objective_name]["nadir"],)
+    fig["data"][4]["y"] += (preference_point[objective_name][0],)
+    fig["data"][5]["y"] += (ideal_nadir[objective_name]["ideal"],)
+    fig["data"][6]["y"] += (ideal_nadir[objective_name]["nadir"],)
     return fig
 
 
@@ -209,3 +182,7 @@ def createscatter2d(request):
         go.Scatter(x=[preference[0]], y=[preference[1]], name="Preference")
     )
     return figure
+
+
+def parallel_coordinates(data, dimensions, color):
+    pass

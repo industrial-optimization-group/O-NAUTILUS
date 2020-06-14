@@ -13,7 +13,7 @@ from flask import session
 
 from onautilus.onautilus import ONAUTILUS
 from UI.app import app
-from UI.pages.tools2 import create_navigator_plot, extend_navigator_plot
+from UI.pages.tools import create_navigator_plot, extend_navigator_plot
 from onautilus.preferential_func_eval import preferential_func_eval as pfe
 
 from desdeo_tools.interaction.request import RequestError
@@ -95,18 +95,95 @@ def layout():
                                     className="mr-1 mt-1 mb-3",
                                     color="primary",
                                 ),
+                                dbc.Button(
+                                    "Extra Information",
+                                    id="extrainfobutton",
+                                    className="mr-1 mt-1 mb-3",
+                                    color="primary",
+                                ),
                             ]
                         ),
                         className="row justify-content-center",
                     )
                 ]
             ),
+            dbc.Row(
+                dbc.Col(
+                    dbc.Collapse(
+                        id="extra-info-collapse",
+                        children=[
+                            dbc.Card(
+                                [
+                                    html.H5(
+                                        "Extra Information", className="card-title"
+                                    ),
+                                    dbc.CardBody(
+                                        [
+                                            dbc.Row(
+                                                dbc.Col(
+                                                    id="nav-graph-data", children=None
+                                                )
+                                            )
+                                        ]
+                                    ),
+                                ]
+                            ),
+                            # dbc.Row(
+                            #    dbc.Col([dcc.Graph(id="parallel-coordinates-plot")])
+                            # ),
+                        ],
+                        is_open=False,
+                    )
+                )
+            ),
+            html.Div(id="callback_blackhole", hidden=True),
             dcc.Interval(
                 id="step_counter", interval=5 * 100, n_intervals=0
             ),  # in milliseconds
             dbc.Row(dbc.Col(html.Div(id="pausewindow"))),
-            html.Div(id="callback_blackhole"),
             html.Div(id="continue_iterate", n_clicks=0, children=1, hidden=True),
+        ]
+    )
+
+
+def extra_info_card(
+    name,
+    is_minimized,
+    preference,
+    global_max,
+    optimistic_reachable_max,
+    known_reachable_max,
+    iteration_point,
+    known_reachable_min,
+    optimistic_reachable_min,
+    global_min,
+):
+    return dbc.Card(
+        [
+            html.H5(name, className="card-title"),
+            dbc.CardBody(
+                dbc.ListGroup(
+                    [
+                        dbc.ListGroupItem(f"Is minimized: {is_minimized}"),
+                        dbc.ListGroupItem(f"Previous preference: {preference}"),
+                        dbc.ListGroupItem(f"Global max: {global_max}"),
+                        dbc.ListGroupItem(
+                            f"Optimistic reachable range max: {optimistic_reachable_max}"
+                        ),
+                        dbc.ListGroupItem(
+                            f"Known reachable range max: {known_reachable_max}"
+                        ),
+                        dbc.ListGroupItem(f"Iteration point: {iteration_point}"),
+                        dbc.ListGroupItem(
+                            f"Known reachable range min: {known_reachable_min}"
+                        ),
+                        dbc.ListGroupItem(
+                            f"Optimistic reachable range min: {optimistic_reachable_min}"
+                        ),
+                        dbc.ListGroupItem(f"Global min: {global_min}"),
+                    ]
+                )
+            ),
         ]
     )
 
@@ -115,6 +192,8 @@ def layout():
     [
         Output({"type": "nav_graph", "name": ALL}, "figure"),
         Output("continue_iterate", "children"),
+        Output("nav-graph-data", "children"),
+        # Output("parallel-coordinates-plot", "figure"),
     ],
     [Input(component_id="step_counter", component_property="n_intervals")],
     [
@@ -146,7 +225,9 @@ def iterate(n, nav_figures, continue_iterate_state):
             create_navigator_plot(ranges_plot_request, objective_name, True, True)
             for objective_name in objective_names
         ]
-        return (nav_figures, 0)
+        if "pref_value" not in session.keys():
+            session["pref_value"] = pd.DataFrame(columns=objective_names, index=[0])
+        continue_iterate = 0
     # Other cases
     else:
         if continue_iterate_state == 0:
@@ -168,7 +249,78 @@ def iterate(n, nav_figures, continue_iterate_state):
             continue_iterate = 1
         # if navigator_graphs is None:
         #     navigator_graph_new = create_navigator_plot(ranges_plot_request)
-        return (nav_figures, continue_iterate)
+    # Extra information cards
+    extra_info = []
+    extra_data = method.request_solutions_plot()
+    for y in objective_names:
+        minimize = extra_data.content["dimensions_data"].loc["minimize"][y]
+        global_max, global_min = [
+            extra_data.content["dimensions_data"].loc["nadir"][y],
+            extra_data.content["dimensions_data"].loc["ideal"][y],
+        ][::minimize]
+        optimistic_reachable_max, optimistic_reachable_min = [
+            extra_data.content["dimensions_data"].loc["nadir_optimistic"][y],
+            extra_data.content["dimensions_data"].loc["ideal_optimistic"][y],
+        ][::minimize]
+        known_reachable_max, known_reachable_min = [
+            extra_data.content["dimensions_data"].loc["nadir_known"][y],
+            extra_data.content["dimensions_data"].loc["ideal_known"][y],
+        ][::minimize]
+        iteration_point = extra_data.content["current_point"][y][0]
+        preference = session["pref_value"][y][0]
+        extra_info.append(
+            extra_info_card(
+                y,
+                True if minimize == 1 else False,
+                preference,
+                global_max,
+                optimistic_reachable_max,
+                known_reachable_max,
+                iteration_point,
+                known_reachable_min,
+                optimistic_reachable_min,
+                global_min,
+            )
+        )
+    extra_info = dbc.CardGroup(extra_info)
+
+    # parallel coords
+    """data = extra_data.content["data"]
+    data["Type"] = "Unreachable"
+    data["Type"][extra_data.content["achievable_ids"]] = "Known data"
+
+    optimistic_data = extra_data.content["optimistic_data"]
+    optimistic_data["Type"] = "Unreachable"
+    optimistic_data["Type"][
+        extra_data.content["achievable_ids_opt"]
+    ] = "Optimistic data"
+
+    ideal = extra_data.content["dimensions_data"].loc["ideal"]
+    nadir = extra_data.content["dimensions_data"].loc["nadir"]
+    ideal_known = extra_data.content["dimensions_data"].loc["ideal_known"]
+    nadir_known = extra_data.content["dimensions_data"].loc["nadir_known"]
+    ideal_optimistic = extra_data.content["dimensions_data"].loc["ideal_optimistic"]
+    nadir_optimistic = extra_data.content["dimensions_data"].loc["nadir_optimistic"]
+    ideal["Type"] = "ideal"
+    nadir["Type"] = "nadir"
+    ideal_known["Type"] = "ideal_known"
+    nadir_known["Type"] = "nadir_known"
+    ideal_optimistic["Type"] = "ideal_optimistic"
+    nadir_optimistic["Type"] = "nadir_optimistic"
+    data = pd.concat(
+        [
+            data,
+            optimistic_data,
+            ideal,
+            nadir,
+            ideal_known,
+            nadir_known,
+            ideal_optimistic,
+            nadir_optimistic,
+        ]
+    )
+    par_coord_fig = ex.parallel_coordinates(data)"""
+    return (nav_figures, continue_iterate, extra_info)
 
 
 @app.callback(
@@ -380,6 +532,17 @@ def function_evaluation(button_press, mei_prefs, updated_scatter_graph):
     return go.Figure(
         scatter_graph["data"] + [ref_point_fig, before_pred_fig, after_pred_fig]
     )
+
+
+@app.callback(
+    Output("extra-info-collapse", "is_open"),
+    [Input("extrainfobutton", "n_clicks")],
+    [State("extra-info-collapse", "is_open")],
+)
+def extra_info_collapse(pressed, state):
+    if pressed is None:
+        raise PreventUpdate
+    return not state
 
 
 if __name__ == "__main__":

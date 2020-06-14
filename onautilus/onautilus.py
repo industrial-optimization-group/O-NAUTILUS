@@ -200,6 +200,7 @@ class ONAUTILUS:
             index=["minimize", "ideal", "nadir"], columns=self.objective_names
         )
         dimensions_data.loc["minimize"] = self.max_multiplier
+
         dimensions_data.loc["ideal"] = self.ideal * self.max_multiplier
         dimensions_data.loc["nadir"] = self.nadir * self.max_multiplier
 
@@ -207,6 +208,19 @@ class ONAUTILUS:
             data=data, dimensions_data=dimensions_data, message="blah"
         )
 
+        request.content["dimensions_data"].loc["ideal_known"] = (
+            self.ideal_known * self.max_multiplier
+        )
+        request.content["dimensions_data"].loc["nadir_known"] = (
+            self.nadir_known * self.max_multiplier
+        )
+
+        request.content["dimensions_data"].loc["ideal_optimistic"] = (
+            self.ideal_optimistic * self.max_multiplier
+        )
+        request.content["dimensions_data"].loc["nadir_optimistic"] = (
+            self.nadir_optimistic * self.max_multiplier
+        )
         request.content["achievable_ids"] = self.currently_achievable_known
         request.content["optimistic_data"] = opt_data
         request.content["achievable_ids_opt"] = self.currently_achievable_optimistic
@@ -233,17 +247,11 @@ class ONAUTILUS:
 
     def request_long_data(self):
         data = (
-            pd.DataFrame(
-                self.non_dominated_known[self.currently_achievable_known],
-                columns=self.objective_names,
-            )
+            pd.DataFrame(self.non_dominated_known, columns=self.objective_names)
             * self.max_multiplier
         )
         opt_data = (
-            pd.DataFrame(
-                self.non_dominated_optimistic[self.currently_achievable_optimistic],
-                columns=self.objective_names,
-            )
+            pd.DataFrame(self.non_dominated_optimistic, columns=self.objective_names)
             * self.max_multiplier
         )
         ideal = pd.DataFrame(
@@ -272,6 +280,9 @@ class ONAUTILUS:
             (current, "Current point"),
         ):
             df["Source"] = source
+            df["Reachable"] = False
+        data["Reachable"][self.currently_achievable_known] = True
+        opt_data["Reachable"][self.currently_achievable_optimistic] = True
         return pd.concat([data, opt_data, ideal, nadir, preference, current])
 
 

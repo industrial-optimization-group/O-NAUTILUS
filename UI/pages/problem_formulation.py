@@ -59,7 +59,8 @@ def layout():
                                 multi=True,
                             ),
                         ],
-                    )
+                    ),
+                    className="row justify-content-center",
                 )
             ),
             # Radio button 1: Decision variables
@@ -78,10 +79,10 @@ def layout():
                                         "value": "min-max",
                                     },
                                 ],
-                                labelStyle={"display": "inline-block"},
                             ),
                         ],
-                    )
+                    ),
+                    className="row justify-content-center",
                 )
             ),
             # Dropdown 2: objective function names
@@ -104,7 +105,8 @@ def layout():
                                 style={"width": "300px"},
                             ),
                         ]
-                    )
+                    ),
+                    className="row justify-content-center",
                 )
             ),
             # Dropdown: maximize
@@ -127,7 +129,8 @@ def layout():
                                 style={"width": "300px"},
                             ),
                         ]
-                    )
+                    ),
+                    className="row justify-content-center",
                 )
             ),
             # Dropdown: choose a test function
@@ -147,7 +150,8 @@ def layout():
                                 style={"width": "300px"},
                             ),
                         ]
-                    )
+                    ),
+                    className="row justify-content-center",
                 )
             ),
             html.Label(["Problem Information:", html.Div(id="prob_info", children=[])]),

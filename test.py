@@ -4,35 +4,42 @@ from dash.exceptions import PreventUpdate
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State, ALL
+import plotly.express as ex
+import numpy as np
+import pandas as pd
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
+data = pd.DataFrame(np.random.rand(100, 3), columns=["a", "s", "d"])
 
 app.layout = html.Div(
     [
-        dcc.Interval(id="clock", interval=1 * 10, n_intervals=0),
-        html.Button(id="pause", children="pause"),
-        html.Div(id={"type": "box", "name": 1}, children=0),
-        html.Div(id={"type": "box", "name": 2}, children=0),
+        dbc.Row(dbc.Col(dbc.Button(id="button"))),
+        dbc.Row(
+            dbc.Col(
+                dbc.Collapse(
+                    id="graph",
+                    children=[
+                        dbc.Row(dbc.Col(html.H1("hi"))),
+                        dbc.Row(
+                            dbc.Col([dcc.Graph(figure=ex.parallel_coordinates(data))])
+                        ),
+                    ],
+                    is_open=True,
+                )
+            )
+        ),
+        html.Div("hi", hidden=True),
     ]
 )
 
 
 @app.callback(
-    Output({"type": "box", "name": ALL}, "children"),
-    [Input("clock", "n_intervals")],
-    [State({"type": "box", "name": 1}, "children")],
+    Output("graph", "is_open"),
+    [Input("button", "n_clicks")],
+    [State("graph", "is_open")],
 )
-def test(tick, current_val):
-    return [current_val + 1, current_val * 2]
-
-
-@app.callback(
-    Output("clock", "disabled"),
-    [Input("pause", "n_clicks")],
-    [State("clock", "disabled")],
-)
-def toggle(click, state):
+def collapse(press, state):
     return not state
 
 
-app.run_server()
+app.run_server(debug=True)
