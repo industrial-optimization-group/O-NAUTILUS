@@ -208,19 +208,19 @@ class ONAUTILUS:
             data=data, dimensions_data=dimensions_data, message="blah"
         )
 
-        request.content["dimensions_data"].loc["ideal_known"] = (
-            self.ideal_known * self.max_multiplier
-        )
-        request.content["dimensions_data"].loc["nadir_known"] = (
-            self.nadir_known * self.max_multiplier
-        )
+        request.content["dimensions_data"].loc["lower_bound"] = (
+            self.achievable_ranges_known * self.max_multiplier
+        ).min(axis=0)
+        request.content["dimensions_data"].loc["upper_bound"] = (
+            self.achievable_ranges_known * self.max_multiplier
+        ).max(axis=0)
 
-        request.content["dimensions_data"].loc["ideal_optimistic"] = (
-            self.ideal_optimistic * self.max_multiplier
-        )
-        request.content["dimensions_data"].loc["nadir_optimistic"] = (
-            self.nadir_optimistic * self.max_multiplier
-        )
+        request.content["dimensions_data"].loc["optimistic_lower_bound"] = (
+            self.achievable_ranges_optimistic * self.max_multiplier
+        ).min(axis=0)
+        request.content["dimensions_data"].loc["optimistic_upper_bound"] = (
+            self.achievable_ranges_optimistic * self.max_multiplier
+        ).max(axis=0)
         request.content["achievable_ids"] = self.currently_achievable_known
         request.content["optimistic_data"] = opt_data
         request.content["achievable_ids_opt"] = self.currently_achievable_optimistic

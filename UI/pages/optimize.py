@@ -75,25 +75,25 @@ def layout():
             ),
             dbc.Row(
                 dbc.Col(
-                    dcc.Loading(
-                        [
-                            dbc.Button(
-                                "Optimize problem",
-                                id="optimize_button",
-                                className="mr-1 mt-1",
-                                color="primary",
-                            )
-                        ]
+                    dbc.Button(
+                        "Optimize problem",
+                        id="optimize_button",
+                        className="mr-1 mt-1",
+                        color="primary",
                     ),
                     className="row justify-content-center",
                 )
             ),
             dbc.Row(
                 dbc.Col(
-                    html.Div(
-                        id="optimization_graph_div",
-                        hidden=True,
-                        children=[html.Div(id="optimization_graph")],
+                    dcc.Loading(
+                        [
+                            html.Div(
+                                id="optimization_graph_div",
+                                hidden=True,
+                                children=[html.Div(id="optimization_graph")],
+                            )
+                        ]
                     ),
                     className="row justify-content-center",
                 )

@@ -259,13 +259,13 @@ def iterate(n, nav_figures, continue_iterate_state):
             extra_data.content["dimensions_data"].loc["ideal"][y],
         ][::minimize]
         optimistic_reachable_max, optimistic_reachable_min = [
-            extra_data.content["dimensions_data"].loc["nadir_optimistic"][y],
-            extra_data.content["dimensions_data"].loc["ideal_optimistic"][y],
-        ][::minimize]
+            extra_data.content["dimensions_data"].loc["optimistic_upper_bound"][y],
+            extra_data.content["dimensions_data"].loc["optimistic_lower_bound"][y],
+        ]
         known_reachable_max, known_reachable_min = [
-            extra_data.content["dimensions_data"].loc["nadir_known"][y],
-            extra_data.content["dimensions_data"].loc["ideal_known"][y],
-        ][::minimize]
+            extra_data.content["dimensions_data"].loc["upper_bound"][y],
+            extra_data.content["dimensions_data"].loc["lower_bound"][y],
+        ]
         iteration_point = extra_data.content["current_point"][y][0]
         preference = session["pref_value"][y][0]
         extra_info.append(
@@ -381,9 +381,10 @@ def submitevent(submitclick, preference_values):
 def pausewindow():
     long_data = session["navigator"].request_long_data()
     objective_names = session["objective_names"]
-    reference = long_data[long_data["Source"] == "Preference point"][
-        objective_names
-    ].values[0]
+
+    df = long_data[long_data["Source"] == "Preference point"]
+    reference = df[objective_names].values[0]
+    df = df[["Source"] + objective_names]
     scatter_graph = ex.scatter_matrix(
         long_data, dimensions=session["objective_names"], color="Source"
     )
@@ -431,10 +432,47 @@ def pausewindow():
                 ),
                 dbc.Row(
                     dbc.Col(
+                        dcc.Loading(
+                            [
+                                dbc.Button(
+                                    "Evaluate new point",
+                                    id="functionevaluation",
+                                    className="mr-1 mt-1",
+                                    color="primary",
+                                )
+                            ]
+                        ),
+                        className="row justify-content-center",
+                    )
+                ),
+                dbc.Row(
+                    dbc.Col(dcc.Graph(id="func_eval_results", figure=scatter_graph))
+                ),
+                dbc.Row(
+                    dbc.Col(html.H3("Results"), className="row justify-content-center")
+                ),
+                dbc.Row(
+                    dbc.Col(
+                        dcc.Loading(
+                            [
+                                html.Div(
+                                    id="results-table",
+                                    children=[
+                                        dbc.Table.from_dataframe(
+                                            df, striped=True, bordered=True, hover=True
+                                        )
+                                    ],
+                                )
+                            ]
+                        )
+                    )
+                ),
+                dbc.Row(
+                    dbc.Col(
                         dbc.Button(
-                            "Evaluate new point",
-                            id="functionevaluation",
-                            className="mr-1 mt-1",
+                            "Go back to training page",
+                            href="/train#O-NAUTILUS",
+                            className="mt-1 mb-1",
                             color="primary",
                         ),
                         className="row justify-content-center",
@@ -442,13 +480,26 @@ def pausewindow():
                 ),
                 dbc.Row(
                     dbc.Col(
-                        dcc.Graph(id="func_eval_results", figure=scatter_graph),
-                        className="row justify-content-center",
-                    )
-                ),
-                dbc.Row(
-                    dbc.Col(
-                        dcc.Link("Go back to training page", href="/train#O-NAUTILUS"),
+                        [
+                            dbc.Button(
+                                "Save data to disk",
+                                id="save-data",
+                                className="mt-1 mb-1",
+                                color="primary",
+                            ),
+                            dbc.Toast(
+                                [
+                                    html.P(
+                                        "Check root folder for onautilus.csv!",
+                                        className="mb-0",
+                                    )
+                                ],
+                                id="toast",
+                                is_open=False,
+                                dismissable=True,
+                                header="Data saved!",
+                            ),
+                        ],
                         className="row justify-content-center",
                     )
                 ),
@@ -458,7 +509,7 @@ def pausewindow():
 
 
 @app.callback(
-    Output("func_eval_results", "figure"),
+    [Output("func_eval_results", "figure"), Output("results-table", "children")],
     [Input("functionevaluation", "n_clicks")],
     [
         State({"type": "mei-preference", "index": ALL}, "value"),
@@ -480,6 +531,7 @@ def function_evaluation(button_press, mei_prefs, updated_scatter_graph):
     ref_point = np.asarray(mei_prefs) * problem._max_multiplier
     var_names = problem.get_variable_names()
     obj_names = problem.get_objective_names()
+
     ideal_current = (
         ranges_request.content["dimensions_data"].loc["ideal"].values
         * problem._max_multiplier
@@ -500,8 +552,8 @@ def function_evaluation(button_press, mei_prefs, updated_scatter_graph):
     )
     y_new = true_func_eval(x_new)
 
-    y_new_predicted = problem.evaluate(x_new, use_surrogate=True).objectives
-
+    y_pred = problem.evaluate(x_new, use_surrogate=True)
+    y_new_predicted = y_pred.objectives
     x = data[var_names].values
     y = data[obj_names].values
     x = np.vstack((x, x_new))
@@ -529,8 +581,22 @@ def function_evaluation(button_press, mei_prefs, updated_scatter_graph):
             dict(label=obj, values=y_new[:, i]) for i, obj in enumerate(obj_names)
         ],
     )
-    return go.Figure(
-        scatter_graph["data"] + [ref_point_fig, before_pred_fig, after_pred_fig]
+    df = pd.DataFrame(
+        np.vstack((mei_prefs, y_pred.objectives, y_pred.uncertainity, y_new)),
+        columns=obj_names,
+    )
+    df["Source"] = [
+        "Preference",
+        "Predicted mean",
+        "Predicted standard deviation",
+        "Value after evaluation",
+    ]
+    df = df[["Source"] + obj_names]
+    return (
+        go.Figure(
+            scatter_graph["data"] + [ref_point_fig, before_pred_fig, after_pred_fig]
+        ),
+        dbc.Table.from_dataframe(df, striped=True, bordered=True, hover=True),
     )
 
 
@@ -543,6 +609,18 @@ def extra_info_collapse(pressed, state):
     if pressed is None:
         raise PreventUpdate
     return not state
+
+
+@app.callback(Output("toast", "is_open"), [Input("save-data", "n_clicks")])
+def save_data(press):
+    if press is None:
+        raise PreventUpdate
+    df = session["original_dataset"]
+    achievable = session["navigator"].currently_achievable_known
+    df["Achievable"] = False
+    df["Achievable"][achievable] = True
+    df.to_csv("onautilus.csv", index_label="id")
+    return True
 
 
 if __name__ == "__main__":
