@@ -2,14 +2,24 @@ import plotly.graph_objects as go
 import numpy as np
 
 
-def create_navigator_plot(request, objective_name, have_x_label=False, legend=False):
+def create_navigator_plot(
+    request, objective_name, have_x_label=False, have_y_label=False, legend=False
+):
     total_steps = request.content["total_steps"]
 
     fig = go.Figure()
     fig.update_layout(height=200, margin={"t": 0})
     if have_x_label:
         fig.update_xaxes(title_text="Steps")
-    fig.update_xaxes(range=[0, total_steps])
+    if have_y_label:
+        fig.update_yaxes(title_text=objective_name)
+    fig.update_xaxes(range=[-0.5, total_steps])
+    # Colors
+    optimistic_boundary = "hsva(37,68,100,1)"
+    optimistic_fill = "hsva(37,68,100,0.6)"
+    known_boundary = "hsva(210,79,57,1)"
+    known_fill = "hsva(210,79,57,0.6)"
+    preference_line = "black"
     # Optimistic lower bound
     fig.add_trace(
         go.Scatter(
@@ -17,8 +27,8 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
             y=[],
             name="Optimistic Lower Bound",
             showlegend=False,
-            mode="lines+markers",
-            line_color="yellow",
+            mode="lines",
+            line_color=optimistic_boundary,
         )
     )
     # Optimistic upper bound
@@ -27,10 +37,10 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
             x=[],
             y=[],
             fill="tonexty",
-            name="Optimistic Reachable area",
-            mode="lines+markers",
-            line_color="yellow",
-            fillcolor="rgba(255,255,0,0.5)",
+            name="Optimistic Reachable Range",
+            mode="lines",
+            line_color=optimistic_boundary,
+            fillcolor=optimistic_fill,
             showlegend=legend,
         )
     )
@@ -41,8 +51,8 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
             y=[],
             name="Lower Bound",
             showlegend=False,
-            mode="lines+markers",
-            line_color="green",
+            mode="lines",
+            line_color=known_boundary,
         )
     )
     # upper bound
@@ -51,10 +61,10 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
             x=[],
             y=[],
             fill="tonexty",
-            name="Reachable area",
-            mode="lines+markers",
-            line_color="green",
-            fillcolor="rgba(0,255,0,0.5)",
+            name="Known Reachable Range",
+            mode="lines",
+            line_color=known_boundary,
+            fillcolor=known_fill,
             showlegend=legend,
         )
     )
@@ -63,11 +73,11 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
         go.Scatter(
             x=[],
             y=[],
-            name="Preference",
+            name="Aspiration Level",
             showlegend=legend,
             mode="lines",
             line_dash="solid",
-            line_color="black",
+            line_color=preference_line,
         )
     )
     # ideal point
@@ -75,9 +85,8 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
         go.Scatter(
             x=[],
             y=[],
-            name="ideal",
-            mode="lines+markers",
-            line_dash="dash",
+            name="Utopian point",
+            mode="lines",
             line_color="green",
             showlegend=legend,
         )
@@ -87,9 +96,8 @@ def create_navigator_plot(request, objective_name, have_x_label=False, legend=Fa
         go.Scatter(
             x=[],
             y=[],
-            name="nadir",
-            mode="lines+markers",
-            line_dash="dash",
+            name="Nadir Point",
+            mode="lines",
             line_color="red",
             showlegend=legend,
         )

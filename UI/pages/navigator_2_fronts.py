@@ -36,7 +36,7 @@ def layout():
                     dbc.Col(
                         html.H3("Aspiration Levels"), width={"size": 2, "offset": 1}
                     ),
-                    dbc.Col(html.H3("Navigator View"), width=8),
+                    dbc.Col(html.H3("Navigator View", className="ml-5"), width=8),
                 ]
             ),
             html.Div(
@@ -173,7 +173,7 @@ def extra_info_card(
                         dbc.ListGroupItem(
                             f"Known reachable range max: {known_reachable_max}"
                         ),
-                        dbc.ListGroupItem(f"Iteration point: {iteration_point}"),
+                        dbc.ListGroupItem(f"Step point: {iteration_point}"),
                         dbc.ListGroupItem(
                             f"Known reachable range min: {known_reachable_min}"
                         ),
@@ -222,7 +222,9 @@ def iterate(n, nav_figures, continue_iterate_state):
         session["preference"] = preference_request
         session["preference_provided"] = False
         nav_figures = [
-            create_navigator_plot(ranges_plot_request, objective_name, True, True)
+            create_navigator_plot(
+                ranges_plot_request, objective_name, have_x_label=True, legend=True
+            )
             for objective_name in objective_names
         ]
         if "pref_value" not in session.keys():
@@ -330,6 +332,7 @@ def iterate(n, nav_figures, continue_iterate_state):
         Output("submitbutton", "disabled"),
         Output({"type": "pref_input", "name": ALL}, "disabled"),
         Output("pausewindow", "children"),
+        Output({"type": "pref_input", "name": ALL}, "placeholder"),
     ],
     [Input("pausebutton", "n_clicks")],
     [
@@ -344,13 +347,39 @@ def pauseevent(pauseclick, pausevalue, input_box_state):
         # return (True, "Play", False, False, False)
     if pausevalue == "Pause":
         if pauseclick == 0:
-            return (False, "Pause", True, [True] * len(input_box_state), None)
-        return (True, "Play", False, [False] * len(input_box_state), pausewindow())
+            return (
+                False,
+                "Pause",
+                True,
+                [True] * len(input_box_state),
+                None,
+                [None] * len(input_box_state),
+            )
+        preference_request = session["preference"]
+        placeholders = [
+            f"Utopian point = {val}"
+            for val in preference_request.content["dimensions_data"].loc["ideal"]
+        ]
+        return (
+            True,
+            "Play",
+            False,
+            [False] * len(input_box_state),
+            pausewindow(),
+            placeholders,
+        )
     # If paused
     elif pausevalue == "Play":
         if session["preference_provided"]:
             # Start playing if preference provided
-            return (False, "Pause", True, [True] * len(input_box_state), None)
+            return (
+                False,
+                "Pause",
+                True,
+                [True] * len(input_box_state),
+                None,
+                [None] * len(input_box_state),
+            )
         else:
             raise PreventUpdate
 
@@ -382,11 +411,14 @@ def pausewindow():
     long_data = session["navigator"].request_long_data()
     objective_names = session["objective_names"]
 
-    df = long_data[long_data["Source"] == "Preference point"]
+    df = long_data[long_data["Source"] == "Reference point"]
     reference = df[objective_names].values[0]
     df = df[["Source"] + objective_names]
+    temp_names = {x: "".join(filter(str.isupper, x.title())) for x in objective_names}
     scatter_graph = ex.scatter_matrix(
-        long_data, dimensions=session["objective_names"], color="Source"
+        long_data.rename(columns=temp_names),
+        dimensions=temp_names.values(),
+        color="Source",
     )
     return (
         html.Div(
@@ -446,7 +478,10 @@ def pausewindow():
                     )
                 ),
                 dbc.Row(
-                    dbc.Col(dcc.Graph(id="func_eval_results", figure=scatter_graph))
+                    dbc.Col(
+                        dcc.Graph(id="func_eval_results", figure=scatter_graph),
+                        className="row justify-content-center",
+                    )
                 ),
                 dbc.Row(
                     dbc.Col(html.H3("Results"), className="row justify-content-center")
@@ -464,7 +499,8 @@ def pausewindow():
                                     ],
                                 )
                             ]
-                        )
+                        ),
+                        className="row justify-content-center",
                     )
                 ),
                 dbc.Row(
@@ -562,10 +598,13 @@ def function_evaluation(button_press, mei_prefs, updated_scatter_graph):
     data = pd.DataFrame(data, columns=var_names + obj_names)
     session["original_dataset"] = data
     ref_point = ref_point * problem._max_multiplier
+    temp_names = [
+        "".join(filter(str.isupper, x.title())) for x in problem.objective_names
+    ]
     ref_point_fig = go.Splom(
         name="Reference Point",
         dimensions=[
-            dict(label=obj, values=[ref_point[i]]) for i, obj in enumerate(obj_names)
+            dict(label=obj, values=[ref_point[i]]) for i, obj in enumerate(temp_names)
         ],
     )
     before_pred_fig = go.Splom(

@@ -15,7 +15,8 @@ cma = "^2.7.0"
 desdeo-emo = "^0.11"
 flask_sessions = "^0.1.5"
 werkzeug = "0.16"
-seaborn = "^0.10.1"
+seaborn = "^0.11.0"
+kaleido = "^0.0.3"
 
 [tool.poetry.dev-dependencies]
 flake8 = {version = "^3.7"}

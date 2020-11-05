@@ -44,7 +44,7 @@ def layout():
                     width={"size": 6, "offset": 3},
                 )
             ),
-            dbc.Row(dbc.Col(html.Div(id="output-data-upload"))),
+            html.Div(id="output-data-upload"),
         ]
     )
 
@@ -86,10 +86,17 @@ def parse_contents(contents, filename, date):
 def create_datatable(df, filename):
     layout = html.Div(
         [
-            html.H5(filename),
-            dash_table.DataTable(
-                data=df.to_dict("records"),
-                columns=[{"name": i, "id": i} for i in df.columns],
+            dbc.Row(
+                dbc.Col(html.Div(filename), className="row justify-content-center mt-4")
+            ),
+            dbc.Row(
+                dbc.Col(
+                    dash_table.DataTable(
+                        data=df.to_dict("records"),
+                        columns=[{"name": i, "id": i} for i in df.columns],
+                    ),
+                    className="row justify-content-center",
+                )
             ),
         ]
     )

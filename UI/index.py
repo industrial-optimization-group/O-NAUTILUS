@@ -83,7 +83,7 @@ def navbuttons(prev, home, next_):
                             id="prev_button",
                             n_clicks_timestamp=-1,
                             href=prev,
-                            className="mr-1 mt-1",
+                            className="mt-3",
                             color="primary",
                         ),
                         dbc.Button(
@@ -91,7 +91,7 @@ def navbuttons(prev, home, next_):
                             id="home_button",
                             n_clicks_timestamp=-1,
                             href=home,
-                            className="mr-1 mt-1",
+                            className="ml-1 mr-1 mt-3",
                             color="primary",
                         ),
                         dbc.Button(
@@ -99,7 +99,7 @@ def navbuttons(prev, home, next_):
                             id="next_button",
                             n_clicks_timestamp=-1,
                             href=next_,
-                            className="mr-1 mt-1",
+                            className="mt-3",
                             color="primary",
                         ),
                     ]

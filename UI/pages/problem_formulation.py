@@ -44,43 +44,41 @@ def layout():
             # Dropdown 1: decision variables
             dbc.Row(
                 dbc.Col(
-                    html.Label(
-                        id="testlabel",
-                        children=[
-                            "Choose decision variables",
-                            dcc.Dropdown(
-                                id="decision_variables",
-                                options=[
-                                    {"label": name, "value": name, "disabled": False}
-                                    for name in names
-                                ],
-                                value=[name for name in names if "x" in name],
-                                placeholder="Choose decision variables",
-                                multi=True,
-                            ),
+                    html.Div("Choose decision variables"),
+                    className="row justify-content-center mt-3",
+                )
+            ),
+            dbc.Row(
+                dbc.Col(
+                    dcc.Dropdown(
+                        id="decision_variables",
+                        options=[
+                            {"label": name, "value": name, "disabled": False}
+                            for name in names
                         ],
+                        value=[name for name in names if "x" in name],
+                        placeholder="Choose decision variables",
+                        multi=True,
                     ),
                     className="row justify-content-center",
                 )
             ),
-            # Radio button 1: Decision variables
+            # Radio button 1: Decision variable bounds
             dbc.Row(
                 dbc.Col(
-                    html.Label(
-                        id="bounds",
-                        children=[
-                            "Choose lower and upper bounds:",
-                            dcc.RadioItems(
-                                id="bounds_button",
-                                options=[
-                                    {"label": "0-1 for all variables", "value": "0-1"},
-                                    {
-                                        "label": "Min-Max from dataset",
-                                        "value": "min-max",
-                                    },
-                                ],
-                            ),
+                    html.Div("Choose lower and upper bounds"),
+                    className="row justify-content-center mt-3",
+                )
+            ),
+            dbc.Row(
+                dbc.Col(
+                    dbc.RadioItems(
+                        id="bounds_button",
+                        options=[
+                            {"label": "0-1 for all variables", "value": "0-1"},
+                            {"label": "Min-Max from dataset", "value": "min-max"},
                         ],
+                        inline=True,
                     ),
                     className="row justify-content-center",
                 )
@@ -88,23 +86,22 @@ def layout():
             # Dropdown 2: objective function names
             dbc.Row(
                 dbc.Col(
-                    html.Label(
-                        [
-                            "Choose objectives",
-                            dcc.Dropdown(
-                                id="objectives",
-                                options=[
-                                    {"label": name, "value": name, "disabled": False}
-                                    for name in names
-                                ],
-                                value=[
-                                    name for name in names if "y" in name or "f" in name
-                                ],
-                                placeholder="Choose objectives",
-                                multi=True,
-                                style={"width": "300px"},
-                            ),
-                        ]
+                    html.Div("Choose objectives"),
+                    className="row justify-content-center mt-3",
+                )
+            ),
+            dbc.Row(
+                dbc.Col(
+                    dcc.Dropdown(
+                        id="objectives",
+                        options=[
+                            {"label": name, "value": name, "disabled": False}
+                            for name in names
+                        ],
+                        value=[name for name in names if "y" in name or "f" in name],
+                        placeholder="Choose objectives",
+                        multi=True,
+                        style={"width": "300px"},
                     ),
                     className="row justify-content-center",
                 )
@@ -112,23 +109,22 @@ def layout():
             # Dropdown: maximize
             dbc.Row(
                 dbc.Col(
-                    html.Label(
-                        [
-                            "Choose objectives to be maximized",
-                            dcc.Dropdown(
-                                id="objectives_max_info",
-                                options=[
-                                    {"label": name, "value": name, "disabled": False}
-                                    for name in names
-                                ],
-                                value=[
-                                    name for name in names if "y" in name or "f" in name
-                                ],
-                                placeholder="Choose objectives to be maximized",
-                                multi=True,
-                                style={"width": "300px"},
-                            ),
-                        ]
+                    html.Div("Choose objectives to be maximized"),
+                    className="row justify-content-center mt-3",
+                )
+            ),
+            dbc.Row(
+                dbc.Col(
+                    dcc.Dropdown(
+                        id="objectives_max_info",
+                        options=[
+                            {"label": name, "value": name, "disabled": False}
+                            for name in names
+                        ],
+                        value=[name for name in names if "y" in name or "f" in name],
+                        placeholder="Choose objectives to be maximized",
+                        multi=True,
+                        style={"width": "300px"},
                     ),
                     className="row justify-content-center",
                 )
@@ -136,25 +132,30 @@ def layout():
             # Dropdown: choose a test function
             dbc.Row(
                 dbc.Col(
-                    html.Label(
-                        [
-                            "Choose test functions:",
-                            dcc.Dropdown(
-                                id="test_functions",
-                                options=[
-                                    {"label": name, "value": name}
-                                    for name in test_problems
-                                ],
-                                placeholder="Choose a test function",
-                                multi=False,
-                                style={"width": "300px"},
-                            ),
-                        ]
+                    html.Div("Choose test functions"),
+                    className="row justify-content-center mt-3",
+                )
+            ),
+            dbc.Row(
+                dbc.Col(
+                    dcc.Dropdown(
+                        id="test_functions",
+                        options=[
+                            {"label": name, "value": name} for name in test_problems
+                        ],
+                        placeholder="Choose a test function",
+                        multi=False,
+                        style={"width": "300px"},
                     ),
                     className="row justify-content-center",
                 )
             ),
-            html.Label(["Problem Information:", html.Div(id="prob_info", children=[])]),
+            html.Div(
+                html.Label(
+                    ["Problem Information:", html.Div(id="prob_info", children=[])]
+                ),
+                hidden=True,
+            ),
             html.Div(id="callback_blackhole_train", hidden=True),
             html.Div(id="callback_blackhole2_train", hidden=True),
         ]

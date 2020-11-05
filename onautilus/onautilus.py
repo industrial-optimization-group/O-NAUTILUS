@@ -274,10 +274,10 @@ class ONAUTILUS:
         for df, source in (
             (data, "Known front"),
             (opt_data, "Optimistic front"),
-            (ideal, "Ideal point"),
+            (ideal, "Utopian point"),
             (nadir, "Nadir point"),
-            (preference, "Preference point"),
-            (current, "Current point"),
+            (preference, "Reference point"),
+            (current, "Step point"),
         ):
             df["Source"] = source
             df["Reachable"] = False

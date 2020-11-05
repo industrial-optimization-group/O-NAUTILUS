@@ -57,21 +57,33 @@ def layout():
                     className="row justify-content-center",
                 )
             ),
+            # Training button
             dbc.Row(
                 dbc.Col(
-                    dcc.Loading(
-                        [
-                            dbc.Button(
-                                "Train models",
-                                id="train_models",
-                                className="mr-1 mt-1",
-                                color="primary",
-                            )
-                        ]
+                    dbc.Button(
+                        "Train models",
+                        id="train_models",
+                        className="mr-1 ml-1 mt-1 mb-1",
+                        color="primary",
                     ),
                     className="row justify-content-center",
                 )
             ),
+            # Training message
+            dbc.Row(
+                dbc.Col(
+                    dcc.Loading(
+                        dbc.Fade(
+                            dbc.Badge("Training complete!", color="success"),
+                            is_in=False,
+                            id="training-badge",
+                            className="mr-1 ml-1 mt-1 mb-1",
+                        )
+                    ),
+                    className="row justify-content-center",
+                )
+            ),
+            # Dropdown to select objectives to show training results
             html.Div(
                 id="results_selection_train_models",
                 hidden=True,
@@ -83,6 +95,7 @@ def layout():
                     ],
                 ),
             ),
+            # Show results and graphs for training
             html.Div(
                 id="results_train_model",
                 hidden=True,
@@ -97,9 +110,11 @@ def layout():
 
 @app.callback(
     [
-        Output("results_train_model", "hidden"),
-        Output("results_selection_train_models", "hidden"),
-        Output("results_selection_train_models_dropdown", "value"),
+        # Uncomment if you want to show these results
+        # Output("results_train_model", "hidden"),
+        # Output("results_selection_train_models", "hidden"),
+        # Output("results_selection_train_models_dropdown", "value"),
+        Output("training-badge", "is_in")
     ],
     [Input("train_models", "n_clicks")],
     [State("surrogate_modelling_technique", "value")],
@@ -130,7 +145,10 @@ def train_all_models(button_clicked, chosen_technique):
         model = regressor()
         model.fit(data[variable_names].values, data[objective].values)
         session[objective + "_model"] = model"""
-    return [False, False, objective_names[0]]
+
+    # Uncomment if you want to show the results
+    # return [False, False, objective_names[0]]
+    return [True]
 
 
 @app.callback(

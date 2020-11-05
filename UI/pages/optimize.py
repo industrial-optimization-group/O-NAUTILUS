@@ -78,7 +78,7 @@ def layout():
                     dbc.Button(
                         "Optimize problem",
                         id="optimize_button",
-                        className="mr-1 mt-1",
+                        className="mr-1 mt-1 mb-5",
                         color="primary",
                     ),
                     className="row justify-content-center",
@@ -160,5 +160,12 @@ def optimize(clicked, chosen_algorithm, chosen_selection_type):
     data = known_front.append(optimistic_front, ignore_index=True).append(
         optimistic_front_evaluated, ignore_index=True
     )
-    figure = ex.scatter_matrix(data, dimensions=problem.objective_names, color="Source")
+    # TODO: Fix common acronyms
+    # Using acronyms. Can lead to errors if the acronyms are same.
+    temp_names = {
+        x: "".join(filter(str.isupper, x.title())) for x in problem.objective_names
+    }
+    figure = ex.scatter_matrix(
+        data.rename(columns=temp_names), dimensions=temp_names.values(), color="Source"
+    )
     return (False, dcc.Graph(figure=figure, id="graph"))
