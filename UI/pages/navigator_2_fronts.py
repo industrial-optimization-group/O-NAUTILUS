@@ -26,7 +26,7 @@ def layout():
         children=[
             dbc.Row(
                 dbc.Col(
-                    html.H1("Navigation", id="header_navigator"),
+                    html.H1("O-NAUTILUS Navigation", id="header_navigator"),
                     className="row justify-content-center",
                 )
             ),
@@ -115,7 +115,8 @@ def layout():
                             dbc.Card(
                                 [
                                     html.H5(
-                                        "Extra Information", className="card-title"
+                                        "Extra Information",
+                                        className="card-title row justify-content-center",
                                     ),
                                     dbc.CardBody(
                                         [
@@ -160,7 +161,7 @@ def extra_info_card(
 ):
     return dbc.Card(
         [
-            html.H5(name, className="card-title"),
+            html.H5(name, className="card-title row justify-content-center"),
             dbc.CardBody(
                 dbc.ListGroup(
                     [
